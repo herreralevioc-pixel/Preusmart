@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 
-const API = "http://127.0.0.1:8001"
+const API = "https://preusmart-production.up.railway.app"
 
 function getUserId() {
   let id = localStorage.getItem("preusmart_id")
