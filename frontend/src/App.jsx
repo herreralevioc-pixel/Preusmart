@@ -42,8 +42,8 @@ const ZONA_INFO = [
   { msg:"El desierto de Atacama es el mas arido del mundo. Hay zonas donde no ha llovido nunca." },
   { msg:"La NASA probo sus rovers en el Valle de la Luna porque se parece tanto a Marte." },
   { msg:"Santiago esta rodeada por los Andes. En dias despejados ves picos nevados desde cualquier parte de la ciudad." },
-  { msg:"Los arboles de la Araucania tienen hasta 2.000 anos de antiguedad. Son mas viejos que la mayoria de los paises del mundo." },
-  { msg:"Torres del Paine tiene glaciares que tardan miles de anos en formarse. El azul del hielo es real, no es filtro." },
+  { msg:"Los arboles de la Araucania tienen hasta 2.000 años de antiguedad." },
+  { msg:"Torres del Paine tiene glaciares que tardan miles de anos en formarse." },
 ]
 
 const POSICIONES = [
