@@ -43,7 +43,7 @@ const ZONA_INFO = [
   { msg:"La NASA probo sus rovers en el Valle de la Luna porque se parece tanto a Marte." },
   { msg:"Santiago esta rodeada por los Andes. En dias despejados ves picos nevados desde cualquier parte de la ciudad." },
   { msg:"Los arboles de la Araucania tienen hasta 2.000 años de antiguedad." },
-  { msg:"Torres del Paine tiene glaciares que tardan miles de anos en formarse." },
+  { msg:"Animo ya queda poco" },
 ]
 
 const POSICIONES = [
