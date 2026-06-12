@@ -27,11 +27,11 @@ function saveProgreso(zonaId, puntaje) {
 const USUARIO_ID = getUserId()
 
 const ZONA_INFO = [
-  { msg: "El norte te espera, vamos!" },
-  { msg: "Norte Chico, tu siguiente parada!" },
-  { msg: "Zona Central, el corazon de Chile!" },
-  { msg: "El sur es tuyo, dale!" },
-  { msg: "Ultimo nivel, lo tienes!" },
+  { msg: "El desierto de Atacama es el mas arido del mundo. Hay zonas donde no ha llovido nunca." },
+  { msg: "La NASA probo sus rovers en el Valle de la Luna porque se parece tanto a Marte." },
+  { msg: "Santiago esta rodeada por los Andes. En dias despejados ves picos nevados desde cualquier parte de la ciudad." },
+  { msg: "Los arboles de la Araucania tienen hasta 2.000 anos de antiguedad. Son mas viejos que la mayoria de los paises del mundo." },
+  { msg: "Torres del Paine tiene glaciares que tardan miles de anos en formarse. El azul del hielo es real, no es filtro." },
 ]
 
 const POSICIONES = [
@@ -138,12 +138,13 @@ export default function App() {
   /* ── MAPA ── */
   if (pantalla === "mapa") {
     const zonaActualIdx = zonas.findIndex(z => z.desbloqueada && !z.completada)
-    const msg = zonaActualIdx >= 0 ? ZONA_INFO[zonaActualIdx].msg : "Completaste todo Chile!"
+    const msg = zonaActualIdx >= 0
+      ? ZONA_INFO[zonaActualIdx].msg
+      : "Completaste todo Chile. Eso no lo hace cualquiera."
 
     return (
       <div style={{ fontFamily:"system-ui,sans-serif", background:"#a8d4e6", minHeight:"100vh" }}>
 
-        {/* Header fijo encima */}
         <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:50, background:"rgba(255,255,255,0.85)", backdropFilter:"blur(6px)", padding:"10px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", boxShadow:"0 1px 8px rgba(0,0,0,0.1)" }}>
           <h1 style={{ fontSize:22, fontWeight:900, color:"#1a3a1a", margin:0 }}>PreuSmart</h1>
           <div style={{ display:"flex", gap:4 }}>
@@ -153,7 +154,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Mapa como imagen real — zonas posicionadas encima */}
         <div style={{ position:"relative", marginTop:52 }}>
           <img
             src="/mapa-chile.png"
@@ -161,7 +161,6 @@ export default function App() {
             style={{ width:"100%", display:"block" }}
           />
 
-          {/* Zona markers sobre el mapa */}
           {zonas.map((zona, i) => {
             const esCurrent = zona.desbloqueada && !zona.completada
             const pos = POSICIONES[i]
@@ -197,7 +196,6 @@ export default function App() {
                 }}>
                   {zona.completada ? "✅" : zona.desbloqueada ? zona.icono : "🔒"}
                 </div>
-
                 <div style={{
                   background:"rgba(255,255,255,0.9)",
                   borderRadius:20,
@@ -210,7 +208,6 @@ export default function App() {
                 }}>
                   {zona.nombre}
                 </div>
-
                 {esCurrent && (
                   <div style={{
                     background:"#4CAF50",
@@ -228,7 +225,6 @@ export default function App() {
             )
           })}
 
-          {/* Rufi + burbuja sobre el mapa abajo */}
           <div style={{
             position:"absolute",
             bottom:16,
@@ -244,11 +240,11 @@ export default function App() {
               borderRadius:"16px 16px 16px 4px",
               padding:"8px 12px",
               boxShadow:"0 2px 14px rgba(0,0,0,0.18)",
-              maxWidth:180,
+              maxWidth:200,
               fontSize:12,
-              fontWeight:600,
+              fontWeight:500,
               color:"#2C3E50",
-              lineHeight:1.4,
+              lineHeight:1.5,
             }}>
               {msg}
             </div>
@@ -271,6 +267,7 @@ export default function App() {
     return (
       <div style={{ minHeight:"100vh", background:"linear-gradient(180deg,#E8F5E9 0%,#F1F8E9 100%)", fontFamily:"system-ui,sans-serif", padding:"16px 16px 32px" }}>
         <div style={{ maxWidth:440, margin:"0 auto" }}>
+
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:20 }}>
             <button onClick={() => setPantalla("mapa")} style={{ background:"#fff", border:"none", borderRadius:10, padding:"8px 14px", cursor:"pointer", fontSize:18, boxShadow:"0 2px 6px rgba(0,0,0,0.1)" }}>←</button>
             <div style={{ flex:1 }}>
@@ -309,20 +306,20 @@ export default function App() {
             <div>
               <div style={{ padding:"12px 16px", borderRadius:14, marginBottom:12, background:seleccion===pregunta.respuesta_correcta?"#E8F5E9":"#FFEBEE", border:`1px solid ${seleccion===pregunta.respuesta_correcta?"#4CAF50":"#F44336"}` }}>
                 <div style={{ fontWeight:700, fontSize:14, color:seleccion===pregunta.respuesta_correcta?"#2E7D32":"#C62828", marginBottom:4 }}>
-                  {seleccion===pregunta.respuesta_correcta?"Correcto!":"No era esa"}
+                  {seleccion===pregunta.respuesta_correcta?"Correcto":"No era esa"}
                 </div>
                 <div style={{ fontSize:13, color:"#555", lineHeight:1.5 }}>{pregunta.explicacion}</div>
               </div>
 
               <div style={{ display:"flex", alignItems:"flex-end", gap:10, marginBottom:14 }}>
                 <img src={`/${imgMascota}`} alt="Rufi" style={{ width:85, height:85, objectFit:"contain", flexShrink:0 }}/>
-                <div style={{ background:"#fff", borderRadius:"16px 16px 16px 4px", padding:"10px 14px", boxShadow:"0 2px 10px rgba(0,0,0,0.1)", fontSize:13, fontWeight:600, color:"#2C3E50", flex:1, lineHeight:1.4 }}>
-                  {cargandoComentario ? "..." : comentario || (seleccion===pregunta.respuesta_correcta?"Bien hecho!":"Vamos, tu puedes!")}
+                <div style={{ background:"#fff", borderRadius:"16px 16px 16px 4px", padding:"10px 14px", boxShadow:"0 2px 10px rgba(0,0,0,0.1)", fontSize:13, fontWeight:500, color:"#2C3E50", flex:1, lineHeight:1.5 }}>
+                  {cargandoComentario ? "..." : comentario || (seleccion===pregunta.respuesta_correcta?"Bien hecho.":"Sigue, la proxima es tuya.")}
                 </div>
               </div>
 
               <button onClick={siguiente} style={{ width:"100%", padding:15, background:"linear-gradient(135deg,#4CAF50,#2E7D32)", border:"none", borderRadius:14, color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 12px rgba(76,175,80,0.4)" }}>
-                {indice+1>=preguntas.length?"Completar zona!":"Siguiente →"}
+                {indice+1>=preguntas.length?"Completar zona":"Siguiente →"}
               </button>
             </div>
           )}
@@ -338,10 +335,10 @@ export default function App() {
       <div style={{ fontSize:60, marginBottom:8 }}>🎉</div>
       <img src="/mascota.png" alt="Rufi" style={{ width:160, height:160, objectFit:"contain", marginBottom:16 }}/>
       <h2 style={{ fontSize:26, fontWeight:900, color:"#fff", textShadow:"0 2px 8px rgba(0,0,0,0.3)", margin:"0 0 8px" }}>
-        {zonaActiva?.nombre} completada!
+        {zonaActiva?.nombre} completada
       </h2>
       <p style={{ color:"rgba(255,255,255,0.9)", marginBottom:20, fontSize:15 }}>
-        Respondiste {correctas} de {preguntas.length} correctamente
+        {correctas} de {preguntas.length} correctas
       </p>
       <div style={{ display:"flex", gap:8, marginBottom:24 }}>
         {preguntas.map((_,i) => <span key={i} style={{ fontSize:32, filter:i<correctas?"none":"grayscale(1) opacity(0.4)" }}>⭐</span>)}
@@ -352,7 +349,7 @@ export default function App() {
         </div>
       )}
       <button onClick={() => setPantalla("mapa")} style={{ padding:"15px 32px", background:"#fff", border:"none", borderRadius:14, color:"#2E7D32", fontSize:16, fontWeight:800, cursor:"pointer", boxShadow:"0 4px 16px rgba(0,0,0,0.2)" }}>
-        Volver al mapa →
+        Volver al mapa
       </button>
     </div>
   )

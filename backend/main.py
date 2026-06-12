@@ -83,18 +83,14 @@ def guardar_progreso(data: ProgresoInput):
 @app.post("/comentario")
 def generar_comentario(data: ComentarioInput):
     if data.es_correcto:
-        prompt = f"""Pregunta PAES respondida correctamente: "{data.pregunta}"
-Escribe UNA sola frase corta de celebracion para un adolescente chileno de 17 anos.
-Tono: amigo cercano, moderno, natural. Como si fuera un mensaje de WhatsApp.
-Ejemplos del vibe correcto: "la rompiste", "eso era", "crack total", "sabias que la tenias".
-Nada de frases de profe ni emojis. Solo la frase, sin comillas."""
+        prompt = f"""El alumno respondio bien esta pregunta PAES: "{data.pregunta}"
+Escribe UNA sola frase breve y genuina. Tono: amigo que te conoce bien, directo, sin exagerar.
+Nada de frases de profe ni jerga forzada. Sin emojis. Solo la frase, sin comillas."""
     else:
-        prompt = f"""Pregunta PAES respondida mal: "{data.pregunta}".
-Respondio "{data.respuesta_usuario}", correcta era "{data.respuesta_correcta}".
-Escribe UNA sola frase corta de apoyo para un adolescente chileno de 17 anos.
-Tono: amigo que te quiere, no te juzga, te da vuelta rapido.
-Ejemplos del vibe correcto: "no te rajes, la siguiente es tuya", "calma, eso se aprende", "cerca, sigamos".
-Nada de frases de profe ni emojis. Solo la frase, sin comillas."""
+        prompt = f"""El alumno se equivoco en esta pregunta PAES: "{data.pregunta}"
+Respondio "{data.respuesta_usuario}", la correcta era "{data.respuesta_correcta}".
+Escribe UNA sola frase corta de apoyo genuino. Tono: amigo calmado que no juzga, directo.
+Nada de dramatismo ni frases de profe. Sin emojis. Solo la frase, sin comillas."""
 
     respuesta = claude.messages.create(
         model="claude-sonnet-4-5",
