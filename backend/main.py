@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
+import anthropic
 import requests
 import os
 
@@ -18,17 +19,24 @@ app.add_middleware(
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-
 HEADERS = {
     "apikey": SUPABASE_KEY,
     "Authorization": f"Bearer {SUPABASE_KEY}",
     "Content-Type": "application/json"
 }
 
+claude = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
 class ProgresoInput(BaseModel):
     usuario_id: str
     zona_id: int
     puntaje: int
+
+class ComentarioInput(BaseModel):
+    es_correcto: bool
+    pregunta: str
+    respuesta_usuario: str
+    respuesta_correcta: str
 
 @app.get("/")
 def root():
@@ -58,7 +66,6 @@ def guardar_progreso(data: ProgresoInput):
         f"{SUPABASE_URL}/rest/v1/progreso_usuario?usuario_id=eq.{data.usuario_id}&zona_id=eq.{data.zona_id}",
         headers=HEADERS
     ).json()
-
     if existente:
         requests.patch(
             f"{SUPABASE_URL}/rest/v1/progreso_usuario?usuario_id=eq.{data.usuario_id}&zona_id=eq.{data.zona_id}",
@@ -72,3 +79,26 @@ def guardar_progreso(data: ProgresoInput):
             json={"usuario_id": data.usuario_id, "zona_id": data.zona_id, "completada": True, "puntaje": data.puntaje}
         )
     return {"ok": True}
+
+@app.post("/comentario")
+def generar_comentario(data: ComentarioInput):
+    if data.es_correcto:
+        prompt = f"""Pregunta PAES respondida correctamente: "{data.pregunta}"
+Escribe UNA sola frase corta de celebracion para un adolescente chileno de 17 anos.
+Tono: amigo cercano, moderno, natural. Como si fuera un mensaje de WhatsApp.
+Ejemplos del vibe correcto: "la rompiste", "eso era", "crack total", "sabias que la tenias".
+Nada de frases de profe ni emojis. Solo la frase, sin comillas."""
+    else:
+        prompt = f"""Pregunta PAES respondida mal: "{data.pregunta}".
+Respondio "{data.respuesta_usuario}", correcta era "{data.respuesta_correcta}".
+Escribe UNA sola frase corta de apoyo para un adolescente chileno de 17 anos.
+Tono: amigo que te quiere, no te juzga, te da vuelta rapido.
+Ejemplos del vibe correcto: "no te rajes, la siguiente es tuya", "calma, eso se aprende", "cerca, sigamos".
+Nada de frases de profe ni emojis. Solo la frase, sin comillas."""
+
+    respuesta = claude.messages.create(
+        model="claude-sonnet-4-5",
+        max_tokens=80,
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return {"comentario": respuesta.content[0].text.strip()}
