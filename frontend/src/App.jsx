@@ -28,9 +28,9 @@ const USUARIO_ID = getUserId()
 
 const ZONA_INFO = [
   { msg: "El cielo del Atacama es tan despejado que ahi estan los telescopios mas potentes del planeta." },
-  { msg: "El Valle del Elqui tiene mas de 300 noches despejadas al ano. Es literalmente el lugar con mejor vista de estrellas del mundo." },
+  { msg: "El Valle del Elqui tiene mas de 300 noches despejadas al año. Es literalmente el lugar con mejor vista de estrellas del mundo." },
   { msg: "En Santiago puedes esquiar y llegar a la playa el mismo dia. Pocas ciudades en el mundo pueden decir eso." },
-  { msg: "Los mapuche nunca fueron conquistados por Espana. Son uno de los pocos pueblos de America que defendieron su territorio hasta el final." },
+  { msg: "Los mapuche nunca fueron conquistados por España. Son uno de los pocos pueblos de America que defendieron su territorio hasta el final." },
   { msg: "En la Patagonia hay viento tan fuerte que puede tirarte al suelo. Los locals lo llaman normal." },
 ]
 
