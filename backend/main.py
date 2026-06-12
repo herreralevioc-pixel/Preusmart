@@ -32,6 +32,12 @@ class ProgresoInput(BaseModel):
     zona_id: int
     puntaje: int
 
+class RegistroInput(BaseModel):
+    usuario_id: str
+    nombre: str
+    materias: list = []
+    dias_estudio: list = []
+
 class ComentarioInput(BaseModel):
     es_correcto: bool
     pregunta: str
@@ -80,14 +86,33 @@ def guardar_progreso(data: ProgresoInput):
         )
     return {"ok": True}
 
+@app.post("/registro")
+def registrar_usuario(data: RegistroInput):
+    existente = requests.get(
+        f"{SUPABASE_URL}/rest/v1/usuarios?usuario_id=eq.{data.usuario_id}",
+        headers=HEADERS
+    ).json()
+    if not existente:
+        requests.post(
+            f"{SUPABASE_URL}/rest/v1/usuarios",
+            headers=HEADERS,
+            json={
+                "usuario_id": data.usuario_id,
+                "nombre": data.nombre,
+                "materias": data.materias,
+                "dias_estudio": data.dias_estudio
+            }
+        )
+    return {"ok": True}
+
 @app.post("/comentario")
 def generar_comentario(data: ComentarioInput):
     if data.es_correcto:
-        prompt = f"""El alumno respondio bien esta pregunta PAES: "{data.pregunta}"
-Escribe UNA sola frase breve y genuina. Tono: amigo que te conoce bien, directo, sin exagerar.
+        prompt = f"""Pregunta PAES respondida correctamente: "{data.pregunta}"
+Escribe UNA sola frase breve y genuina con el tono de maturana de aprender con amor. Tono: amigo que te conoce bien, directo, sin exagerar para un adolescente.
 Nada de frases de profe ni jerga forzada. Sin emojis. Solo la frase, sin comillas."""
     else:
-        prompt = f"""El alumno se equivoco en esta pregunta PAES: "{data.pregunta}"
+        prompt = f"""Pregunta PAES respondida mal: "{data.pregunta}"
 Respondio "{data.respuesta_usuario}", la correcta era "{data.respuesta_correcta}".
 Escribe UNA sola frase corta de apoyo genuino. Tono: amigo calmado que no juzga, directo.
 Nada de dramatismo ni frases de profe. Sin emojis. Solo la frase, sin comillas."""
