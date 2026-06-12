@@ -27,11 +27,19 @@ function saveProgreso(zonaId, puntaje) {
 const USUARIO_ID = getUserId()
 
 const ZONA_INFO = [
-  { deco: "Desierto y sol", msg: "El norte te espera, vamos!" },
-  { deco: "Costa y flores", msg: "Norte Chico, tu siguiente parada!" },
-  { deco: "La capital", msg: "Zona Central, el corazon de Chile!" },
-  { deco: "Bosques y lluvia", msg: "El sur es tuyo, dale!" },
-  { deco: "Hielo y viento", msg: "Ultimo nivel, lo tienes!" },
+  { msg: "El norte te espera, vamos!" },
+  { msg: "Norte Chico, tu siguiente parada!" },
+  { msg: "Zona Central, el corazon de Chile!" },
+  { msg: "El sur es tuyo, dale!" },
+  { msg: "Ultimo nivel, lo tienes!" },
+]
+
+const POSICIONES = [
+  { top: "11%", left: "50%" },
+  { top: "27%", left: "45%" },
+  { top: "44%", left: "47%" },
+  { top: "62%", left: "42%" },
+  { top: "79%", left: "38%" },
 ]
 
 export default function App() {
@@ -133,67 +141,122 @@ export default function App() {
     const msg = zonaActualIdx >= 0 ? ZONA_INFO[zonaActualIdx].msg : "Completaste todo Chile!"
 
     return (
-      <div style={{ minHeight:"100vh", background:"linear-gradient(180deg,#A8D5A2 0%,#5A9E52 60%,#2D6A27 100%)", fontFamily:"system-ui,sans-serif", paddingBottom:120 }}>
+      <div style={{
+        minHeight: "100vh",
+        backgroundImage: "url('/mapa-chile.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center top",
+        fontFamily: "system-ui,sans-serif",
+        position: "relative",
+        overflow: "hidden",
+      }}>
 
-        <div style={{ textAlign:"center", padding:"28px 20px 8px" }}>
-          <h1 style={{ fontSize:34, fontWeight:900, color:"#fff", margin:0, textShadow:"0 2px 10px rgba(0,0,0,0.3)" }}>PreuSmart</h1>
-          <p style={{ color:"rgba(255,255,255,0.85)", margin:"4px 0 0", fontSize:14 }}>Recorre Chile respondiendo la PAES</p>
-        </div>
+        <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.06)", pointerEvents:"none" }}/>
 
-        <div style={{ display:"flex", justifyContent:"center", gap:6, padding:"10px 0 20px" }}>
-          {zonas.map((z,i) => (
-            <span key={i} style={{ fontSize:22, filter:z.completada?"none":"grayscale(1) opacity(0.35)" }}>⭐</span>
-          ))}
-        </div>
-
-        <div style={{ maxWidth:360, margin:"0 auto", padding:"0 20px", position:"relative" }}>
-          <div style={{ position:"absolute", left:"50%", top:0, bottom:0, width:2, background:"rgba(255,255,255,0.35)", transform:"translateX(-50%)", backgroundImage:"repeating-linear-gradient(to bottom,rgba(255,255,255,0.5) 0,rgba(255,255,255,0.5) 8px,transparent 8px,transparent 18px)" }}/>
-
-          <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
-            {zonas.map((zona, i) => {
-              const esCurrent = zona.desbloqueada && !zona.completada
-              const info = ZONA_INFO[i]
-              return (
-                <div key={zona.id} style={{ display:"flex", alignItems:"center", gap:12, flexDirection:i%2===0?"row":"row-reverse" }}>
-                  <div
-                    onClick={() => esCurrent && jugarZona(zona)}
-                    style={{
-                      width:64, height:64, borderRadius:"50%", flexShrink:0,
-                      background:zona.completada?"#4CAF50":zona.desbloqueada?"#fff":"rgba(255,255,255,0.25)",
-                      border:`3px solid ${esCurrent?"#FFD700":zona.completada?"#2E7D32":"rgba(255,255,255,0.4)"}`,
-                      display:"flex", alignItems:"center", justifyContent:"center", fontSize:26,
-                      cursor:esCurrent?"pointer":"default",
-                      boxShadow:esCurrent?"0 0 0 5px rgba(255,215,0,0.4),0 4px 12px rgba(0,0,0,0.2)":"0 2px 8px rgba(0,0,0,0.15)",
-                    }}>
-                    {zona.completada?"✅":zona.desbloqueada?zona.icono:"🔒"}
-                  </div>
-
-                  <div style={{
-                    flex:1, borderRadius:14, padding:"10px 14px",
-                    background:zona.completada?"rgba(76,175,80,0.88)":zona.desbloqueada?"rgba(255,255,255,0.88)":"rgba(255,255,255,0.22)",
-                    boxShadow:"0 2px 8px rgba(0,0,0,0.1)"
-                  }}>
-                    <div style={{ fontWeight:700, fontSize:15, color:zona.completada?"#fff":zona.desbloqueada?"#2C3E50":"rgba(255,255,255,0.75)" }}>{zona.nombre}</div>
-                    <div style={{ fontSize:12, marginTop:2, color:zona.desbloqueada&&!zona.completada?"#777":"rgba(255,255,255,0.7)" }}>{info.deco}</div>
-                    {esCurrent && (
-                      <div onClick={() => jugarZona(zona)} style={{ marginTop:7, display:"inline-block", background:"#4CAF50", color:"#fff", borderRadius:20, padding:"3px 12px", fontSize:12, fontWeight:700, cursor:"pointer" }}>
-                        Jugar →
-                      </div>
-                    )}
-                    {zona.completada && <div style={{ fontSize:12, color:"rgba(255,255,255,0.9)", marginTop:4, fontWeight:600 }}>Completada</div>}
-                  </div>
-                </div>
-              )
-            })}
+        {/* Header */}
+        <div style={{ position:"relative", zIndex:20, textAlign:"center", padding:"22px 20px 6px" }}>
+          <h1 style={{ fontSize:34, fontWeight:900, color:"#1a3a1a", margin:0, textShadow:"0 1px 6px rgba(255,255,255,0.9)" }}>PreuSmart</h1>
+          <div style={{ display:"flex", justifyContent:"center", gap:6, marginTop:6 }}>
+            {zonas.map((z,i) => (
+              <span key={i} style={{ fontSize:22, filter:z.completada?"none":"grayscale(1) opacity(0.4)" }}>⭐</span>
+            ))}
           </div>
         </div>
 
-        <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"0 20px 12px", display:"flex", alignItems:"flex-end", pointerEvents:"none" }}>
-          <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", gap:8 }}>
-            <div style={{ background:"#fff", borderRadius:"16px 16px 16px 4px", padding:"10px 14px", boxShadow:"0 2px 12px rgba(0,0,0,0.15)", maxWidth:200, fontSize:13, fontWeight:600, color:"#2C3E50", lineHeight:1.4 }}>
+        {/* Zona markers */}
+        <div style={{ position:"relative", height:"85vh", zIndex:10 }}>
+          {zonas.map((zona, i) => {
+            const esCurrent = zona.desbloqueada && !zona.completada
+            const pos = POSICIONES[i]
+            return (
+              <div
+                key={zona.id}
+                onClick={() => esCurrent && jugarZona(zona)}
+                style={{
+                  position:"absolute",
+                  top: pos.top,
+                  left: pos.left,
+                  transform: "translate(-50%, -50%)",
+                  display:"flex",
+                  flexDirection:"column",
+                  alignItems:"center",
+                  gap:4,
+                  cursor: esCurrent ? "pointer" : "default",
+                  zIndex:10,
+                }}
+              >
+                <div style={{
+                  width: esCurrent ? 60 : 50,
+                  height: esCurrent ? 60 : 50,
+                  borderRadius:"50%",
+                  background: zona.completada ? "#4CAF50" : zona.desbloqueada ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.45)",
+                  border: `3px solid ${esCurrent ? "#FFD700" : zona.completada ? "#2E7D32" : "rgba(80,80,80,0.35)"}`,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontSize: esCurrent ? 26 : 22,
+                  boxShadow: esCurrent
+                    ? "0 0 0 6px rgba(255,215,0,0.35), 0 4px 14px rgba(0,0,0,0.25)"
+                    : "0 2px 8px rgba(0,0,0,0.2)",
+                  transition:"all 0.2s",
+                }}>
+                  {zona.completada ? "✅" : zona.desbloqueada ? zona.icono : "🔒"}
+                </div>
+                <div style={{
+                  background:"rgba(255,255,255,0.88)",
+                  borderRadius:20,
+                  padding:"2px 10px",
+                  fontSize:11,
+                  fontWeight:700,
+                  color:"#1a3a1a",
+                  boxShadow:"0 1px 4px rgba(0,0,0,0.15)",
+                  whiteSpace:"nowrap",
+                }}>
+                  {zona.nombre}
+                </div>
+                {esCurrent && (
+                  <div style={{
+                    background:"#4CAF50",
+                    color:"#fff",
+                    borderRadius:20,
+                    padding:"3px 12px",
+                    fontSize:11,
+                    fontWeight:700,
+                    boxShadow:"0 2px 6px rgba(76,175,80,0.5)",
+                  }}>
+                    Jugar →
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Rufi + burbuja */}
+        <div style={{
+          position:"fixed", bottom:0, left:0, right:0,
+          padding:"0 16px 8px",
+          display:"flex", alignItems:"flex-end",
+          pointerEvents:"none",
+          zIndex:30,
+        }}>
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", gap:6 }}>
+            <div style={{
+              background:"#fff",
+              borderRadius:"16px 16px 16px 4px",
+              padding:"10px 14px",
+              boxShadow:"0 2px 14px rgba(0,0,0,0.18)",
+              maxWidth:210,
+              fontSize:13,
+              fontWeight:600,
+              color:"#2C3E50",
+              lineHeight:1.4,
+            }}>
               {msg}
             </div>
-            <img src="/mascota.png" alt="mascota" style={{ width:88, height:88, objectFit:"contain" }}/>
+            <img
+              src="/mascota.png"
+              alt="Rufi"
+              style={{ width:130, height:130, objectFit:"contain" }}
+            />
           </div>
         </div>
       </div>
@@ -257,7 +320,7 @@ export default function App() {
               </div>
 
               <div style={{ display:"flex", alignItems:"flex-end", gap:10, marginBottom:14 }}>
-                <img src={`/${imgMascota}`} alt="mascota" style={{ width:60, height:60, objectFit:"contain", flexShrink:0 }}/>
+                <img src={`/${imgMascota}`} alt="Rufi" style={{ width:85, height:85, objectFit:"contain", flexShrink:0 }}/>
                 <div style={{ background:"#fff", borderRadius:"16px 16px 16px 4px", padding:"10px 14px", boxShadow:"0 2px 10px rgba(0,0,0,0.1)", fontSize:13, fontWeight:600, color:"#2C3E50", flex:1, lineHeight:1.4 }}>
                   {cargandoComentario ? "..." : comentario || (seleccion===pregunta.respuesta_correcta?"Bien hecho!":"Vamos, tu puedes!")}
                 </div>
@@ -278,7 +341,7 @@ export default function App() {
   return (
     <div style={{ minHeight:"100vh", background:"linear-gradient(180deg,#A8D5A2 0%,#5A9E52 100%)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24, fontFamily:"system-ui,sans-serif", textAlign:"center" }}>
       <div style={{ fontSize:60, marginBottom:8 }}>🎉</div>
-      <img src="/mascota.png" alt="mascota" style={{ width:120, height:120, objectFit:"contain", marginBottom:16 }}/>
+      <img src="/mascota.png" alt="Rufi" style={{ width:160, height:160, objectFit:"contain", marginBottom:16 }}/>
       <h2 style={{ fontSize:26, fontWeight:900, color:"#fff", textShadow:"0 2px 8px rgba(0,0,0,0.3)", margin:"0 0 8px" }}>
         {zonaActiva?.nombre} completada!
       </h2>
