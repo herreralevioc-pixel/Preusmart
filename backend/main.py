@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from supabase import create_client
 from pydantic import BaseModel
 from dotenv import load_dotenv
+import requests
 import os
 
 load_dotenv()
@@ -16,7 +16,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+HEADERS = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json"
+}
 
 class ProgresoInput(BaseModel):
     usuario_id: str
@@ -39,26 +46,29 @@ def get_zonas():
 
 @app.get("/preguntas/{zona_id}")
 def get_preguntas(zona_id: int):
-    resultado = supabase.table("preguntas").select("*").eq("zona_id", zona_id).execute()
-    return resultado.data
+    r = requests.get(
+        f"{SUPABASE_URL}/rest/v1/preguntas?zona_id=eq.{zona_id}",
+        headers=HEADERS
+    )
+    return r.json()
 
 @app.post("/progreso")
 def guardar_progreso(data: ProgresoInput):
-    existente = supabase.table("progreso_usuario").select("id").eq("usuario_id", data.usuario_id).eq("zona_id", data.zona_id).execute()
-    if existente.data:
-        supabase.table("progreso_usuario").update({
-            "completada": True, "puntaje": data.puntaje
-        }).eq("usuario_id", data.usuario_id).eq("zona_id", data.zona_id).execute()
-    else:
-        supabase.table("progreso_usuario").insert({
-            "usuario_id": data.usuario_id,
-            "zona_id": data.zona_id,
-            "completada": True,
-            "puntaje": data.puntaje
-        }).execute()
-    return {"ok": True}
+    existente = requests.get(
+        f"{SUPABASE_URL}/rest/v1/progreso_usuario?usuario_id=eq.{data.usuario_id}&zona_id=eq.{data.zona_id}",
+        headers=HEADERS
+    ).json()
 
-@app.get("/progreso/{usuario_id}")
-def get_progreso(usuario_id: str):
-    resultado = supabase.table("progreso_usuario").select("*").eq("usuario_id", usuario_id).execute()
-    return resultado.data
+    if existente:
+        requests.patch(
+            f"{SUPABASE_URL}/rest/v1/progreso_usuario?usuario_id=eq.{data.usuario_id}&zona_id=eq.{data.zona_id}",
+            headers=HEADERS,
+            json={"completada": True, "puntaje": data.puntaje}
+        )
+    else:
+        requests.post(
+            f"{SUPABASE_URL}/rest/v1/progreso_usuario",
+            headers=HEADERS,
+            json={"usuario_id": data.usuario_id, "zona_id": data.zona_id, "completada": True, "puntaje": data.puntaje}
+        )
+    return {"ok": True}
