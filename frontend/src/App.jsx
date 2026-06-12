@@ -35,11 +35,11 @@ const ZONA_INFO = [
 ]
 
 const POSICIONES = [
-  { top: "11%", left: "50%" },
-  { top: "27%", left: "45%" },
-  { top: "44%", left: "47%" },
-  { top: "62%", left: "42%" },
-  { top: "79%", left: "38%" },
+  { top: "12%", left: "52%" },
+  { top: "29%", left: "47%" },
+  { top: "47%", left: "49%" },
+  { top: "64%", left: "44%" },
+  { top: "83%", left: "40%" },
 ]
 
 export default function App() {
@@ -141,30 +141,27 @@ export default function App() {
     const msg = zonaActualIdx >= 0 ? ZONA_INFO[zonaActualIdx].msg : "Completaste todo Chile!"
 
     return (
-      <div style={{
-        minHeight: "100vh",
-        backgroundImage: "url('/mapa-chile.png')",
-        backgroundSize: "cover",
-        backgroundPosition: "center top",
-        fontFamily: "system-ui,sans-serif",
-        position: "relative",
-        overflow: "hidden",
-      }}>
+      <div style={{ fontFamily:"system-ui,sans-serif", background:"#a8d4e6", minHeight:"100vh" }}>
 
-        <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.06)", pointerEvents:"none" }}/>
-
-        {/* Header */}
-        <div style={{ position:"relative", zIndex:20, textAlign:"center", padding:"22px 20px 6px" }}>
-          <h1 style={{ fontSize:34, fontWeight:900, color:"#1a3a1a", margin:0, textShadow:"0 1px 6px rgba(255,255,255,0.9)" }}>PreuSmart</h1>
-          <div style={{ display:"flex", justifyContent:"center", gap:6, marginTop:6 }}>
+        {/* Header fijo encima */}
+        <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:50, background:"rgba(255,255,255,0.85)", backdropFilter:"blur(6px)", padding:"10px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", boxShadow:"0 1px 8px rgba(0,0,0,0.1)" }}>
+          <h1 style={{ fontSize:22, fontWeight:900, color:"#1a3a1a", margin:0 }}>PreuSmart</h1>
+          <div style={{ display:"flex", gap:4 }}>
             {zonas.map((z,i) => (
-              <span key={i} style={{ fontSize:22, filter:z.completada?"none":"grayscale(1) opacity(0.4)" }}>⭐</span>
+              <span key={i} style={{ fontSize:18, filter:z.completada?"none":"grayscale(1) opacity(0.35)" }}>⭐</span>
             ))}
           </div>
         </div>
 
-        {/* Zona markers */}
-        <div style={{ position:"relative", height:"85vh", zIndex:10 }}>
+        {/* Mapa como imagen real — zonas posicionadas encima */}
+        <div style={{ position:"relative", marginTop:52 }}>
+          <img
+            src="/mapa-chile.png"
+            alt="Mapa de Chile"
+            style={{ width:"100%", display:"block" }}
+          />
+
+          {/* Zona markers sobre el mapa */}
           {zonas.map((zona, i) => {
             const esCurrent = zona.desbloqueada && !zona.completada
             const pos = POSICIONES[i]
@@ -176,35 +173,36 @@ export default function App() {
                   position:"absolute",
                   top: pos.top,
                   left: pos.left,
-                  transform: "translate(-50%, -50%)",
+                  transform:"translate(-50%, -50%)",
                   display:"flex",
                   flexDirection:"column",
                   alignItems:"center",
-                  gap:4,
+                  gap:3,
                   cursor: esCurrent ? "pointer" : "default",
                   zIndex:10,
                 }}
               >
                 <div style={{
-                  width: esCurrent ? 60 : 50,
-                  height: esCurrent ? 60 : 50,
+                  width: esCurrent ? 54 : 44,
+                  height: esCurrent ? 54 : 44,
                   borderRadius:"50%",
                   background: zona.completada ? "#4CAF50" : zona.desbloqueada ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.45)",
-                  border: `3px solid ${esCurrent ? "#FFD700" : zona.completada ? "#2E7D32" : "rgba(80,80,80,0.35)"}`,
+                  border: `3px solid ${esCurrent ? "#FFD700" : zona.completada ? "#2E7D32" : "rgba(80,80,80,0.4)"}`,
                   display:"flex", alignItems:"center", justifyContent:"center",
-                  fontSize: esCurrent ? 26 : 22,
+                  fontSize: esCurrent ? 24 : 20,
                   boxShadow: esCurrent
-                    ? "0 0 0 6px rgba(255,215,0,0.35), 0 4px 14px rgba(0,0,0,0.25)"
-                    : "0 2px 8px rgba(0,0,0,0.2)",
+                    ? "0 0 0 5px rgba(255,215,0,0.4), 0 4px 12px rgba(0,0,0,0.3)"
+                    : "0 2px 6px rgba(0,0,0,0.25)",
                   transition:"all 0.2s",
                 }}>
                   {zona.completada ? "✅" : zona.desbloqueada ? zona.icono : "🔒"}
                 </div>
+
                 <div style={{
-                  background:"rgba(255,255,255,0.88)",
+                  background:"rgba(255,255,255,0.9)",
                   borderRadius:20,
-                  padding:"2px 10px",
-                  fontSize:11,
+                  padding:"2px 8px",
+                  fontSize:10,
                   fontWeight:700,
                   color:"#1a3a1a",
                   boxShadow:"0 1px 4px rgba(0,0,0,0.15)",
@@ -212,13 +210,14 @@ export default function App() {
                 }}>
                   {zona.nombre}
                 </div>
+
                 {esCurrent && (
                   <div style={{
                     background:"#4CAF50",
                     color:"#fff",
                     borderRadius:20,
-                    padding:"3px 12px",
-                    fontSize:11,
+                    padding:"2px 10px",
+                    fontSize:10,
                     fontWeight:700,
                     boxShadow:"0 2px 6px rgba(76,175,80,0.5)",
                   }}>
@@ -228,35 +227,32 @@ export default function App() {
               </div>
             )
           })}
-        </div>
 
-        {/* Rufi + burbuja */}
-        <div style={{
-          position:"fixed", bottom:0, left:0, right:0,
-          padding:"0 16px 8px",
-          display:"flex", alignItems:"flex-end",
-          pointerEvents:"none",
-          zIndex:30,
-        }}>
-          <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", gap:6 }}>
+          {/* Rufi + burbuja sobre el mapa abajo */}
+          <div style={{
+            position:"absolute",
+            bottom:16,
+            left:12,
+            display:"flex",
+            flexDirection:"column",
+            alignItems:"flex-start",
+            gap:6,
+            zIndex:20,
+          }}>
             <div style={{
               background:"#fff",
               borderRadius:"16px 16px 16px 4px",
-              padding:"10px 14px",
+              padding:"8px 12px",
               boxShadow:"0 2px 14px rgba(0,0,0,0.18)",
-              maxWidth:210,
-              fontSize:13,
+              maxWidth:180,
+              fontSize:12,
               fontWeight:600,
               color:"#2C3E50",
               lineHeight:1.4,
             }}>
               {msg}
             </div>
-            <img
-              src="/mascota.png"
-              alt="Rufi"
-              style={{ width:130, height:130, objectFit:"contain" }}
-            />
+            <img src="/mascota.png" alt="Rufi" style={{ width:120, height:120, objectFit:"contain" }}/>
           </div>
         </div>
       </div>
@@ -275,7 +271,6 @@ export default function App() {
     return (
       <div style={{ minHeight:"100vh", background:"linear-gradient(180deg,#E8F5E9 0%,#F1F8E9 100%)", fontFamily:"system-ui,sans-serif", padding:"16px 16px 32px" }}>
         <div style={{ maxWidth:440, margin:"0 auto" }}>
-
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:20 }}>
             <button onClick={() => setPantalla("mapa")} style={{ background:"#fff", border:"none", borderRadius:10, padding:"8px 14px", cursor:"pointer", fontSize:18, boxShadow:"0 2px 6px rgba(0,0,0,0.1)" }}>←</button>
             <div style={{ flex:1 }}>
