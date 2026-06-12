@@ -27,11 +27,11 @@ function saveProgreso(zonaId, puntaje) {
 const USUARIO_ID = getUserId()
 
 const ZONA_INFO = [
-  { deco: "🌵🏜️", msg: "El desierto te espera, preparate!" },
-  { deco: "🌊🌺", msg: "Norte Chico, costa y flores!" },
-  { deco: "🏔️🌆", msg: "La capital te desafia!" },
-  { deco: "🌲🌧️", msg: "El sur es tuyo, vamos!" },
-  { deco: "🧊🐧", msg: "Ultimo desafio, tu puedes!" },
+  { deco: "Desierto y sol", msg: "El norte te espera, vamos!" },
+  { deco: "Costa y flores", msg: "Norte Chico, tu siguiente parada!" },
+  { deco: "La capital", msg: "Zona Central, el corazon de Chile!" },
+  { deco: "Bosques y lluvia", msg: "El sur es tuyo, dale!" },
+  { deco: "Hielo y viento", msg: "Ultimo nivel, lo tienes!" },
 ]
 
 export default function App() {
@@ -44,6 +44,8 @@ export default function App() {
   const [feedback, setFeedback] = useState(false)
   const [correctas, setCorrectas] = useState(0)
   const [imgMascota, setImgMascota] = useState("mascota.png")
+  const [comentario, setComentario] = useState("")
+  const [cargandoComentario, setCargandoComentario] = useState(false)
 
   useEffect(() => {
     fetch(`${API}/zonas`)
@@ -66,6 +68,7 @@ export default function App() {
     setFeedback(false)
     setCorrectas(0)
     setImgMascota("mascota.png")
+    setComentario("")
     fetch(`${API}/preguntas/${zona.id}`)
       .then(r => r.json())
       .then(data => { setPreguntas(data); setPantalla("quiz") })
@@ -75,12 +78,28 @@ export default function App() {
     if (feedback) return
     setSeleccion(opcion)
     setFeedback(true)
-    if (opcion === preguntas[indice].respuesta_correcta) {
+    setComentario("")
+    setCargandoComentario(true)
+    const esCorrecta = opcion === preguntas[indice].respuesta_correcta
+    if (esCorrecta) {
       setCorrectas(c => c + 1)
       setImgMascota("mascota.png")
     } else {
       setImgMascota("mascota-triste.png")
     }
+    fetch(`${API}/comentario`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        es_correcto: esCorrecta,
+        pregunta: preguntas[indice].enunciado,
+        respuesta_usuario: opcion,
+        respuesta_correcta: preguntas[indice].respuesta_correcta
+      })
+    })
+      .then(r => r.json())
+      .then(data => { setComentario(data.comentario); setCargandoComentario(false) })
+      .catch(() => { setCargandoComentario(false) })
   }
 
   function siguiente() {
@@ -104,6 +123,7 @@ export default function App() {
       setSeleccion(null)
       setFeedback(false)
       setImgMascota("mascota.png")
+      setComentario("")
     }
   }
 
@@ -115,20 +135,17 @@ export default function App() {
     return (
       <div style={{ minHeight:"100vh", background:"linear-gradient(180deg,#A8D5A2 0%,#5A9E52 60%,#2D6A27 100%)", fontFamily:"system-ui,sans-serif", paddingBottom:120 }}>
 
-        {/* Header */}
         <div style={{ textAlign:"center", padding:"28px 20px 8px" }}>
           <h1 style={{ fontSize:34, fontWeight:900, color:"#fff", margin:0, textShadow:"0 2px 10px rgba(0,0,0,0.3)" }}>PreuSmart</h1>
           <p style={{ color:"rgba(255,255,255,0.85)", margin:"4px 0 0", fontSize:14 }}>Recorre Chile respondiendo la PAES</p>
         </div>
 
-        {/* Estrellas */}
         <div style={{ display:"flex", justifyContent:"center", gap:6, padding:"10px 0 20px" }}>
           {zonas.map((z,i) => (
             <span key={i} style={{ fontSize:22, filter:z.completada?"none":"grayscale(1) opacity(0.35)" }}>⭐</span>
           ))}
         </div>
 
-        {/* Zonas */}
         <div style={{ maxWidth:360, margin:"0 auto", padding:"0 20px", position:"relative" }}>
           <div style={{ position:"absolute", left:"50%", top:0, bottom:0, width:2, background:"rgba(255,255,255,0.35)", transform:"translateX(-50%)", backgroundImage:"repeating-linear-gradient(to bottom,rgba(255,255,255,0.5) 0,rgba(255,255,255,0.5) 8px,transparent 8px,transparent 18px)" }}/>
 
@@ -137,33 +154,33 @@ export default function App() {
               const esCurrent = zona.desbloqueada && !zona.completada
               const info = ZONA_INFO[i]
               return (
-                <div key={zona.id} style={{ display:"flex", alignItems:"center", gap:12, flexDirection: i%2===0?"row":"row-reverse" }}>
+                <div key={zona.id} style={{ display:"flex", alignItems:"center", gap:12, flexDirection:i%2===0?"row":"row-reverse" }}>
                   <div
                     onClick={() => esCurrent && jugarZona(zona)}
                     style={{
                       width:64, height:64, borderRadius:"50%", flexShrink:0,
-                      background: zona.completada?"#4CAF50": zona.desbloqueada?"#fff":"rgba(255,255,255,0.25)",
+                      background:zona.completada?"#4CAF50":zona.desbloqueada?"#fff":"rgba(255,255,255,0.25)",
                       border:`3px solid ${esCurrent?"#FFD700":zona.completada?"#2E7D32":"rgba(255,255,255,0.4)"}`,
                       display:"flex", alignItems:"center", justifyContent:"center", fontSize:26,
-                      cursor: esCurrent?"pointer":"default",
-                      boxShadow: esCurrent?"0 0 0 5px rgba(255,215,0,0.4),0 4px 12px rgba(0,0,0,0.2)":"0 2px 8px rgba(0,0,0,0.15)",
+                      cursor:esCurrent?"pointer":"default",
+                      boxShadow:esCurrent?"0 0 0 5px rgba(255,215,0,0.4),0 4px 12px rgba(0,0,0,0.2)":"0 2px 8px rgba(0,0,0,0.15)",
                     }}>
-                    {zona.completada?"✅": zona.desbloqueada? zona.icono:"🔒"}
+                    {zona.completada?"✅":zona.desbloqueada?zona.icono:"🔒"}
                   </div>
 
                   <div style={{
                     flex:1, borderRadius:14, padding:"10px 14px",
-                    background: zona.completada?"rgba(76,175,80,0.88)": zona.desbloqueada?"rgba(255,255,255,0.88)":"rgba(255,255,255,0.22)",
+                    background:zona.completada?"rgba(76,175,80,0.88)":zona.desbloqueada?"rgba(255,255,255,0.88)":"rgba(255,255,255,0.22)",
                     boxShadow:"0 2px 8px rgba(0,0,0,0.1)"
                   }}>
-                    <div style={{ fontWeight:700, fontSize:15, color: zona.completada?"#fff": zona.desbloqueada?"#2C3E50":"rgba(255,255,255,0.75)" }}>{zona.nombre}</div>
-                    <div style={{ fontSize:13, marginTop:2, color: zona.desbloqueada && !zona.completada?"#555":"rgba(255,255,255,0.7)" }}>{info.deco}</div>
+                    <div style={{ fontWeight:700, fontSize:15, color:zona.completada?"#fff":zona.desbloqueada?"#2C3E50":"rgba(255,255,255,0.75)" }}>{zona.nombre}</div>
+                    <div style={{ fontSize:12, marginTop:2, color:zona.desbloqueada&&!zona.completada?"#777":"rgba(255,255,255,0.7)" }}>{info.deco}</div>
                     {esCurrent && (
                       <div onClick={() => jugarZona(zona)} style={{ marginTop:7, display:"inline-block", background:"#4CAF50", color:"#fff", borderRadius:20, padding:"3px 12px", fontSize:12, fontWeight:700, cursor:"pointer" }}>
                         Jugar →
                       </div>
                     )}
-                    {zona.completada && <div style={{ fontSize:12, color:"rgba(255,255,255,0.9)", marginTop:4, fontWeight:600 }}>✓ Completada</div>}
+                    {zona.completada && <div style={{ fontSize:12, color:"rgba(255,255,255,0.9)", marginTop:4, fontWeight:600 }}>Completada</div>}
                   </div>
                 </div>
               )
@@ -171,7 +188,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Mascota + burbuja */}
         <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"0 20px 12px", display:"flex", alignItems:"flex-end", pointerEvents:"none" }}>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", gap:8 }}>
             <div style={{ background:"#fff", borderRadius:"16px 16px 16px 4px", padding:"10px 14px", boxShadow:"0 2px 12px rgba(0,0,0,0.15)", maxWidth:200, fontSize:13, fontWeight:600, color:"#2C3E50", lineHeight:1.4 }}>
@@ -194,7 +210,7 @@ export default function App() {
       { letra:"D", texto:pregunta.opcion_d },
     ]
     return (
-      <div style={{ minHeight:"100vh", background:"linear-gradient(180deg,#E8F5E9 0%,#F1F8E9 100%)", fontFamily:"system-ui,sans-serif", padding:"16px 16px 100px" }}>
+      <div style={{ minHeight:"100vh", background:"linear-gradient(180deg,#E8F5E9 0%,#F1F8E9 100%)", fontFamily:"system-ui,sans-serif", padding:"16px 16px 32px" }}>
         <div style={{ maxWidth:440, margin:"0 auto" }}>
 
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:20 }}>
@@ -235,19 +251,23 @@ export default function App() {
             <div>
               <div style={{ padding:"12px 16px", borderRadius:14, marginBottom:12, background:seleccion===pregunta.respuesta_correcta?"#E8F5E9":"#FFEBEE", border:`1px solid ${seleccion===pregunta.respuesta_correcta?"#4CAF50":"#F44336"}` }}>
                 <div style={{ fontWeight:700, fontSize:14, color:seleccion===pregunta.respuesta_correcta?"#2E7D32":"#C62828", marginBottom:4 }}>
-                  {seleccion===pregunta.respuesta_correcta?"✓ Correcto!":"✗ No era esa"}
+                  {seleccion===pregunta.respuesta_correcta?"Correcto!":"No era esa"}
                 </div>
                 <div style={{ fontSize:13, color:"#555", lineHeight:1.5 }}>{pregunta.explicacion}</div>
               </div>
+
+              <div style={{ display:"flex", alignItems:"flex-end", gap:10, marginBottom:14 }}>
+                <img src={`/${imgMascota}`} alt="mascota" style={{ width:60, height:60, objectFit:"contain", flexShrink:0 }}/>
+                <div style={{ background:"#fff", borderRadius:"16px 16px 16px 4px", padding:"10px 14px", boxShadow:"0 2px 10px rgba(0,0,0,0.1)", fontSize:13, fontWeight:600, color:"#2C3E50", flex:1, lineHeight:1.4 }}>
+                  {cargandoComentario ? "..." : comentario || (seleccion===pregunta.respuesta_correcta?"Bien hecho!":"Vamos, tu puedes!")}
+                </div>
+              </div>
+
               <button onClick={siguiente} style={{ width:"100%", padding:15, background:"linear-gradient(135deg,#4CAF50,#2E7D32)", border:"none", borderRadius:14, color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 12px rgba(76,175,80,0.4)" }}>
-                {indice+1>=preguntas.length?"Completar zona! 🎉":"Siguiente →"}
+                {indice+1>=preguntas.length?"Completar zona!":"Siguiente →"}
               </button>
             </div>
           )}
-        </div>
-
-        <div style={{ position:"fixed", bottom:12, right:16 }}>
-          <img src={`/${imgMascota}`} alt="mascota" style={{ width:80, height:80, objectFit:"contain" }}/>
         </div>
       </div>
     )
