@@ -109,13 +109,13 @@ def registrar_usuario(data: RegistroInput):
 def generar_comentario(data: ComentarioInput):
     if data.es_correcto:
         prompt = f"""Pregunta PAES respondida correctamente: "{data.pregunta}"
-Escribe UNA sola frase breve y genuina con el tono de maturana de aprender con amor. Tono: amigo que te conoce bien, directo, sin exagerar para un adolescente pero cercao y frases cortas.
+Escribe UNA sola frase breve y genuina con el tono de maturana de aprender con amor. Tono: amigo que te conoce bien, directo, sin exagerar para un adolescente pero cercano y frases cortas.
 Nada de frases de profe ni jerga forzada. Sin emojis. Solo la frase, sin comillas."""
     else:
         prompt = f"""Pregunta PAES respondida mal: "{data.pregunta}"
 Respondio "{data.respuesta_usuario}", la correcta era "{data.respuesta_correcta}".
 Escribe UNA sola frase corta de apoyo genuino. Tono: amigo calmado que no juzga, directo, frases cortas y que te apoyen para no hacerte sentir mal.
-Nada de dramatismo ni frases de profe. Sin emojis. Solo la frase, sin comillas."""
+Nada de dramatismo ni frases trilladas. Sin emojis. Solo la frase, sin comillas."""
 
     respuesta = claude.messages.create(
         model="claude-sonnet-4-5",
