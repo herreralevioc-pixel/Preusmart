@@ -182,7 +182,12 @@ export default function App() {
         <div style={{background:"#fff",borderRadius:"16px 16px 16px 4px",padding:"12px 16px",marginBottom:32,fontSize:14,fontWeight:500,color:"#2C3E50",maxWidth:260,lineHeight:1.6}}>
           Hola! Soy Rufi. Entra con Google para guardar tu progreso en todos tus dispositivos.
         </div>
-        <button onClick={signInWithGoogle} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 24px",background:"#fff",border:"none",borderRadius:12,cursor:"pointer",fontSize:15,fontWeight:700,color:"#2C3E50",boxShadow:"0 4px 14px rgba(0,0,0,0.2)",width:"100%",maxWidth:300,justifyContent:"center"}}>
+        <button onClick={async () => {
+          try {
+            const result = await signInWithGoogle();
+            if (result?.user) setUsuario(result.user);
+          } catch(e) { console.error(e); }
+        }} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 24px",background:"#fff",border:"none",borderRadius:12,cursor:"pointer",fontSize:15,fontWeight:700,color:"#2C3E50",boxShadow:"0 4px 14px rgba(0,0,0,0.2)",width:"100%",maxWidth:300,justifyContent:"center"}}>
           <img src="https://www.google.com/favicon.ico" alt="Google" style={{width:20,height:20}}/>
           Entrar con Google
         </button>
