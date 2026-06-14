@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence } from "firebase/auth";
 import { getAnalytics, logEvent } from "firebase/analytics";
 
 const firebaseConfig = {
@@ -19,7 +19,8 @@ export const analytics = getAnalytics(app);
 const googleProvider = new GoogleAuthProvider();
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-export const signInWithGoogle = () => {
+export const signInWithGoogle = async () => {
+  await setPersistence(auth, browserLocalPersistence);
   if (isMobile) return signInWithRedirect(auth, googleProvider);
   return signInWithPopup(auth, googleProvider);
 };
