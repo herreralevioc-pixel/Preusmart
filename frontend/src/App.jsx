@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react"
-import { signInWithGoogle, onAuthChange, track } from "./firebase"
+import { signInWithGoogle, logout, onAuthChange, track } from "./firebase"
 
 const API = "https://preusmart-production.up.railway.app"
+const RUFI = "mascota.gif" // cambia a "mascota.gif" cuando tengas el gif
 
 function getProgreso() {
   const saved = localStorage.getItem("preusmart_progreso")
   return saved ? JSON.parse(saved) : []
 }
-
 function saveProgreso(zonaId, puntaje) {
   const progreso = getProgreso()
   const idx = progreso.findIndex(p => p.zona_id === zonaId)
@@ -22,48 +22,63 @@ const MATERIAS_OPC = [
   { id:"historia",    nombre:"Historia",     emoji:"🏛️", disponible:false },
   { id:"ciencias",    nombre:"Ciencias",     emoji:"🔬", disponible:false },
 ]
-
 const DIAS_OPC = [
   {id:"L",nombre:"Lun"},{id:"M",nombre:"Mar"},{id:"X",nombre:"Mié"},
   {id:"J",nombre:"Jue"},{id:"V",nombre:"Vie"},{id:"S",nombre:"Sáb"},{id:"D",nombre:"Dom"},
 ]
-
 const ZONA_INFO = [
   { msg:"El desierto de Atacama es el mas arido del mundo. Hay zonas donde no ha llovido nunca." },
   { msg:"La NASA probo sus rovers en el Valle de la Luna porque se parece tanto a Marte." },
   { msg:"Santiago esta rodeada por los Andes. En dias despejados ves picos nevados desde cualquier parte de la ciudad." },
   { msg:"Los arboles de la Araucania tienen hasta 2.000 años de antiguedad." },
-  { msg:"" },
+  { msg:"Completaste todo Chile. Eso no lo hace cualquiera." },
 ]
-
 const POSICIONES = [
   {top:"12%",left:"52%"},{top:"29%",left:"47%"},{top:"47%",left:"49%"},
   {top:"64%",left:"44%"},{top:"83%",left:"40%"},
 ]
-
 const shell = {
   maxWidth:420, margin:"0 auto", minHeight:"100vh",
   position:"relative", boxShadow:"0 0 40px rgba(0,0,0,0.12)", overflow:"hidden",
 }
-
 const greenBg = {
   background:"linear-gradient(180deg,#A8D5A2 0%,#4A8C3F 100%)",
   display:"flex", flexDirection:"column", alignItems:"center",
   justifyContent:"center", padding:"32px 24px", textAlign:"center", minHeight:"100vh",
 }
 
+function NavBar({ pantalla, setPantalla }) {
+  const tabs = [
+    { id:"logros",   label:"logros",   icon:"🏆" },
+    { id:"repaso",   label:"repaso",   icon:"📋" },
+    { id:"mapa",     label:"",         icon:"✈️", main:true },
+    { id:"perfil",   label:"perfil",   icon:"👤" },
+    { id:"opciones", label:"opciones", icon:"⚙️" },
+  ]
+  return (
+    <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:420,background:"#fff",borderTop:"1px solid rgba(0,0,0,0.08)",display:"flex",justifyContent:"space-around",alignItems:"center",padding:"8px 0 14px",zIndex:100,boxShadow:"0 -2px 12px rgba(0,0,0,0.08)"}}>
+      {tabs.map(tab=>(
+        <div key={tab.id} onClick={()=>setPantalla(tab.id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",flex:1}}>
+          {tab.main
+            ? <div style={{width:52,height:52,borderRadius:"50%",background:"linear-gradient(135deg,#4CAF50,#2E7D32)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,marginTop:-24,boxShadow:"0 4px 14px rgba(76,175,80,0.45)"}}>{tab.icon}</div>
+            : <span style={{fontSize:22}}>{tab.icon}</span>
+          }
+          {tab.label && <span style={{fontSize:9,fontWeight:700,color:pantalla===tab.id?"#4CAF50":"#aaa",letterSpacing:0.3}}>{tab.label}</span>}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function App() {
   const [usuario,            setUsuario]            = useState(null)
   const [cargandoAuth,       setCargandoAuth]       = useState(true)
-
   const nombreGuardado = localStorage.getItem("preusmart_nombre")
-
   const [nombre,             setNombre]             = useState(nombreGuardado || "")
   const [paso,               setPaso]               = useState(0)
   const [inputNombre,        setInputNombre]        = useState("")
   const [materiasSelec,      setMateriasSelec]      = useState(["matematicas"])
   const [diasSelec,          setDiasSelec]          = useState([])
-
   const [pantalla,           setPantalla]           = useState("mapa")
   const [zonas,              setZonas]              = useState([])
   const [preguntas,          setPreguntas]          = useState([])
@@ -72,40 +87,31 @@ export default function App() {
   const [seleccion,          setSeleccion]          = useState(null)
   const [feedback,           setFeedback]           = useState(false)
   const [correctas,          setCorrectas]          = useState(0)
-  const [imgMascota,         setImgMascota]         = useState("mascota.png")
+  const [imgMascota,         setImgMascota]         = useState(RUFI)
   const [comentario,         setComentario]         = useState("")
   const [cargandoComentario, setCargandoComentario] = useState(false)
+  const [mostrarMensaje,     setMostrarMensaje]     = useState(false)
 
-  // ── Firebase Auth ──
   useEffect(() => {
-    const unsub = onAuthChange((user) => {
-      setUsuario(user)
-      setCargandoAuth(false)
-    })
+    const unsub = onAuthChange((user) => { setUsuario(user); setCargandoAuth(false) })
     return () => unsub()
   }, [])
 
   useEffect(() => {
     if (!nombre || !usuario) return
-    fetch(`${API}/zonas`)
-      .then(r => r.json())
-      .then(zonasData => {
-        const progreso   = getProgreso()
-        const completadas = progreso.filter(p => p.completada).map(p => p.zona_id)
-        setZonas(zonasData.map((z, i) => ({
-          ...z,
-          completada:   completadas.includes(z.id),
-          desbloqueada: i === 0 || completadas.includes(zonasData[i-1].id)
-        })))
-      })
+    fetch(`${API}/zonas`).then(r=>r.json()).then(zonasData => {
+      const progreso    = getProgreso()
+      const completadas = progreso.filter(p=>p.completada).map(p=>p.zona_id)
+      setZonas(zonasData.map((z,i)=>({
+        ...z,
+        completada:   completadas.includes(z.id),
+        desbloqueada: i===0 || completadas.includes(zonasData[i-1].id)
+      })))
+    })
   }, [nombre, usuario])
 
-  function toggleMateria(id) {
-    setMateriasSelec(prev => prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id])
-  }
-  function toggleDia(id) {
-    setDiasSelec(prev => prev.includes(id) ? prev.filter(d => d !== id) : [...prev, id])
-  }
+  function toggleMateria(id) { setMateriasSelec(prev=>prev.includes(id)?prev.filter(m=>m!==id):[...prev,id]) }
+  function toggleDia(id)     { setDiasSelec(prev=>prev.includes(id)?prev.filter(d=>d!==id):[...prev,id]) }
 
   function completarOnboarding() {
     const n = inputNombre.trim()
@@ -113,37 +119,33 @@ export default function App() {
     localStorage.setItem("preusmart_materias", JSON.stringify(materiasSelec))
     localStorage.setItem("preusmart_dias",     JSON.stringify(diasSelec))
     setNombre(n)
-    fetch(`${API}/registro`, {
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ usuario_id: usuario.uid, nombre:n, materias:materiasSelec, dias_estudio:diasSelec })
-    }).catch(() => {})
-    track("onboarding_completado", { nombre: n })
+    fetch(`${API}/registro`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({usuario_id:usuario.uid,nombre:n,materias:materiasSelec,dias_estudio:diasSelec})}).catch(()=>{})
+    track("onboarding_completado",{nombre:n})
   }
 
   function jugarZona(zona) {
     setZonaActiva(zona); setIndice(0); setSeleccion(null)
-    setFeedback(false); setCorrectas(0); setImgMascota("mascota.png"); setComentario("")
-    if (zona.completada) track("zona_repetida",  { zona_id: zona.id })
-    else                 track("zona_iniciada",   { zona_id: zona.id, zona_nombre: zona.nombre })
+    setFeedback(false); setCorrectas(0); setImgMascota(RUFI); setComentario("")
+    setMostrarMensaje(false)
+    if (zona.completada) track("zona_repetida",{zona_id:zona.id})
+    else                 track("zona_iniciada", {zona_id:zona.id,zona_nombre:zona.nombre})
     fetch(`${API}/preguntas/${zona.id}`).then(r=>r.json()).then(data=>{setPreguntas(data);setPantalla("quiz")})
   }
 
   function responder(opcion) {
     if (feedback) return
     setSeleccion(opcion); setFeedback(true); setComentario(""); setCargandoComentario(true)
-    const esCorrecta = opcion === preguntas[indice].respuesta_correcta
-    if (esCorrecta) { setCorrectas(c=>c+1); setImgMascota("mascota.png") }
+    const esCorrecta = opcion===preguntas[indice].respuesta_correcta
+    if (esCorrecta) { setCorrectas(c=>c+1); setImgMascota(RUFI) }
     else setImgMascota("mascota-triste.png")
-    track("pregunta_respondida", { zona_id: zonaActiva.id, es_correcto: esCorrecta, indice })
-    fetch(`${API}/comentario`, {
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ es_correcto:esCorrecta, pregunta:preguntas[indice].enunciado, respuesta_usuario:opcion, respuesta_correcta:preguntas[indice].respuesta_correcta })
-    }).then(r=>r.json()).then(data=>{setComentario(data.comentario);setCargandoComentario(false)}).catch(()=>{setCargandoComentario(false)})
+    track("pregunta_respondida",{zona_id:zonaActiva.id,es_correcto:esCorrecta,indice})
+    fetch(`${API}/comentario`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({es_correcto:esCorrecta,pregunta:preguntas[indice].enunciado,respuesta_usuario:opcion,respuesta_correcta:preguntas[indice].respuesta_correcta})})
+      .then(r=>r.json()).then(data=>{setComentario(data.comentario);setCargandoComentario(false)}).catch(()=>{setCargandoComentario(false)})
   }
 
   function siguiente() {
-    const esUltima = indice+1 >= preguntas.length
-    const total = correctas + (seleccion === preguntas[indice].respuesta_correcta ? 1 : 0)
+    const esUltima = indice+1>=preguntas.length
+    const total = correctas+(seleccion===preguntas[indice].respuesta_correcta?1:0)
     if (esUltima) {
       saveProgreso(zonaActiva.id, total)
       fetch(`${API}/progreso`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({usuario_id:usuario.uid,zona_id:zonaActiva.id,puntaje:total})}).catch(()=>{})
@@ -152,30 +154,30 @@ export default function App() {
         if(i>0&&arr[i-1].id===zonaActiva.id) return{...z,desbloqueada:true}
         return z
       }))
-      track("zona_completada", { zona_id: zonaActiva.id, puntaje: total })
+      track("zona_completada",{zona_id:zonaActiva.id,puntaje:total})
       setPantalla("completado")
     } else {
-      setIndice(i=>i+1); setSeleccion(null); setFeedback(false); setImgMascota("mascota.png"); setComentario("")
+      setIndice(i=>i+1); setSeleccion(null); setFeedback(false); setImgMascota(RUFI); setComentario("")
     }
   }
 
-  // ── Pantalla de carga ──
+  // ── CARGA ──
   if (cargandoAuth) return (
     <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",background:"#4A8C3F",fontFamily:"system-ui,sans-serif"}}>
       <div style={{textAlign:"center"}}>
-        <img src="/mascota.png" alt="Rufi" style={{width:100,marginBottom:16}}/>
+        <img src={RUFI} alt="Rufi" style={{width:100,marginBottom:16}}/>
         <div style={{color:"#fff",fontSize:16,fontWeight:600}}>Cargando...</div>
       </div>
     </div>
   )
 
-  // ── Login con Google ──
+  // ── LOGIN ──
   if (!usuario) return (
     <div style={{background:"#4A8C3F",minHeight:"100vh",fontFamily:"system-ui,sans-serif"}}>
       <div style={{...shell,...greenBg}}>
         <h1 style={{fontSize:32,fontWeight:900,color:"#fff",margin:"0 0 4px",textShadow:"0 2px 8px rgba(0,0,0,0.2)"}}>PreuSmart</h1>
         <p style={{color:"rgba(255,255,255,0.8)",fontSize:13,marginBottom:28}}>Tu compañero hacia la universidad 🇨🇱</p>
-        <img src="/mascota.png" alt="Rufi" style={{width:140,height:140,objectFit:"contain",marginBottom:20}}/>
+        <img src={RUFI} alt="Rufi" style={{width:140,height:140,objectFit:"contain",marginBottom:20}}/>
         <div style={{background:"#fff",borderRadius:"16px 16px 16px 4px",padding:"12px 16px",marginBottom:32,fontSize:14,fontWeight:500,color:"#2C3E50",maxWidth:260,lineHeight:1.6}}>
           Hola! Soy Rufi. Entra con Google para guardar tu progreso en todos tus dispositivos.
         </div>
@@ -187,25 +189,20 @@ export default function App() {
     </div>
   )
 
-  /* ── ONBOARDING ── */
+  // ── ONBOARDING ──
   if (!nombre) {
-
-    if (paso === 0) return (
+    if (paso===0) return (
       <div style={{background:"#4A8C3F",minHeight:"100vh",fontFamily:"system-ui,sans-serif"}}>
         <div style={{...shell,...greenBg}}>
           <h1 style={{fontSize:28,fontWeight:900,color:"#fff",margin:"0 0 4px",textShadow:"0 2px 8px rgba(0,0,0,0.2)"}}>PreuSmart</h1>
           <p style={{color:"rgba(255,255,255,0.8)",fontSize:13,marginBottom:24}}>Tu compañero hacia la universidad</p>
-          <img src="/mascota.png" alt="Rufi" style={{width:130,height:130,objectFit:"contain",marginBottom:16}}/>
+          <img src={RUFI} alt="Rufi" style={{width:130,height:130,objectFit:"contain",marginBottom:16}}/>
           <div style={{background:"#fff",borderRadius:"16px 16px 16px 4px",padding:"12px 16px",marginBottom:28,fontSize:14,fontWeight:500,color:"#2C3E50",maxWidth:260,lineHeight:1.6}}>
             Hola! Soy Rufi. Voy a acompañarte en tu camino hacia la universidad. ¿Cómo te llamas?
           </div>
           <div style={{width:"100%",maxWidth:300}}>
-            <input
-              type="text" placeholder="Tu nombre o apodo..."
-              value={inputNombre} onChange={e=>setInputNombre(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&inputNombre.trim()&&setPaso(1)}
-              style={{width:"100%",padding:"13px 16px",borderRadius:12,border:"none",fontSize:15,fontFamily:"system-ui,sans-serif",marginBottom:10,boxShadow:"0 2px 10px rgba(0,0,0,0.15)",outline:"none",boxSizing:"border-box"}}
-            />
+            <input type="text" placeholder="Tu nombre o apodo..." value={inputNombre} onChange={e=>setInputNombre(e.target.value)} onKeyDown={e=>e.key==="Enter"&&inputNombre.trim()&&setPaso(1)}
+              style={{width:"100%",padding:"13px 16px",borderRadius:12,border:"none",fontSize:15,fontFamily:"system-ui,sans-serif",marginBottom:10,boxShadow:"0 2px 10px rgba(0,0,0,0.15)",outline:"none",boxSizing:"border-box"}}/>
             <button onClick={()=>inputNombre.trim()&&setPaso(1)}
               style={{width:"100%",padding:13,background:inputNombre.trim()?"#fff":"rgba(255,255,255,0.3)",border:"none",borderRadius:12,color:inputNombre.trim()?"#2E7D32":"rgba(255,255,255,0.5)",fontSize:15,fontWeight:800,cursor:inputNombre.trim()?"pointer":"default",boxShadow:inputNombre.trim()?"0 4px 14px rgba(0,0,0,0.2)":"none",transition:"all 0.2s"}}>
               Continuar →
@@ -214,17 +211,16 @@ export default function App() {
         </div>
       </div>
     )
-
-    if (paso === 1) return (
+    if (paso===1) return (
       <div style={{background:"#4A8C3F",minHeight:"100vh",fontFamily:"system-ui,sans-serif"}}>
         <div style={{...shell,...greenBg}}>
-          <img src="/mascota.png" alt="Rufi" style={{width:110,height:110,objectFit:"contain",marginBottom:14}}/>
+          <img src={RUFI} alt="Rufi" style={{width:110,height:110,objectFit:"contain",marginBottom:14}}/>
           <div style={{background:"#fff",borderRadius:"16px 16px 16px 4px",padding:"12px 16px",marginBottom:24,fontSize:14,fontWeight:500,color:"#2C3E50",maxWidth:260,lineHeight:1.6}}>
             {inputNombre.trim()}, que bueno tenerte aca. ¿Qué quieres explorar conmigo?
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,width:"100%",maxWidth:300,marginBottom:20}}>
             {MATERIAS_OPC.map(m=>{
-              const sel = materiasSelec.includes(m.id)
+              const sel=materiasSelec.includes(m.id)
               return (
                 <div key={m.id} onClick={()=>toggleMateria(m.id)} style={{background:sel?"rgba(255,255,255,0.95)":"rgba(255,255,255,0.25)",border:`2px solid ${sel?"#FFD700":"rgba(255,255,255,0.35)"}`,borderRadius:14,padding:"14px 10px",cursor:"pointer",textAlign:"center",boxShadow:sel?"0 0 0 3px rgba(255,215,0,0.3)":"none",transition:"all 0.15s",position:"relative"}}>
                   <div style={{fontSize:28,marginBottom:4}}>{m.emoji}</div>
@@ -242,17 +238,16 @@ export default function App() {
         </div>
       </div>
     )
-
     return (
       <div style={{background:"#4A8C3F",minHeight:"100vh",fontFamily:"system-ui,sans-serif"}}>
         <div style={{...shell,...greenBg}}>
-          <img src="/mascota.png" alt="Rufi" style={{width:110,height:110,objectFit:"contain",marginBottom:14}}/>
+          <img src={RUFI} alt="Rufi" style={{width:110,height:110,objectFit:"contain",marginBottom:14}}/>
           <div style={{background:"#fff",borderRadius:"16px 16px 16px 4px",padding:"12px 16px",marginBottom:24,fontSize:14,fontWeight:500,color:"#2C3E50",maxWidth:260,lineHeight:1.6}}>
             ¿Qué días quieres que nos juntemos a explorar?
           </div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center",marginBottom:24,maxWidth:300}}>
             {DIAS_OPC.map(d=>{
-              const sel = diasSelec.includes(d.id)
+              const sel=diasSelec.includes(d.id)
               return (
                 <div key={d.id} onClick={()=>toggleDia(d.id)} style={{width:56,height:56,borderRadius:14,background:sel?"#fff":"rgba(255,255,255,0.25)",border:`2px solid ${sel?"#FFD700":"rgba(255,255,255,0.35)"}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",boxShadow:sel?"0 0 0 3px rgba(255,215,0,0.3)":"none",transition:"all 0.15s"}}>
                   <div style={{fontSize:14,fontWeight:800,color:sel?"#2E7D32":"#fff"}}>{d.id}</div>
@@ -271,15 +266,14 @@ export default function App() {
     )
   }
 
-  /* ── MAPA ── */
-  if (pantalla === "mapa") {
+  // ── MAPA ──
+  if (pantalla==="mapa") {
     const zonaActualIdx = zonas.findIndex(z=>z.desbloqueada&&!z.completada)
     const msg = zonaActualIdx>=0
       ? `${nombre}, ${ZONA_INFO[zonaActualIdx].msg.toLowerCase()}`
-      : `${nombre}, completaste todo Chile. Eso no lo hace cualquiera.`
-
+      : `${nombre}, ${ZONA_INFO[4].msg}`
     return (
-      <div style={{background:"#a8d4e6",minHeight:"100vh",fontFamily:"system-ui,sans-serif"}}>
+      <div style={{background:"#a8d4e6",minHeight:"100vh",fontFamily:"system-ui,sans-serif",paddingBottom:70}}>
         <div style={shell}>
           <div style={{position:"sticky",top:0,zIndex:50,background:"rgba(255,255,255,0.88)",backdropFilter:"blur(8px)",padding:"10px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 1px 6px rgba(0,0,0,0.08)"}}>
             <h1 style={{fontSize:20,fontWeight:900,color:"#1a3a1a",margin:0}}>PreuSmart</h1>
@@ -290,8 +284,8 @@ export default function App() {
           <div style={{position:"relative",background:"#a8d4e6"}}>
             <img src="/mapa-chile.png" alt="Mapa de Chile" style={{width:"100%",display:"block"}}/>
             {zonas.map((zona,i)=>{
-              const esCurrent  = zona.desbloqueada && !zona.completada
-              const esJugable  = zona.desbloqueada || zona.completada
+              const esCurrent  = zona.desbloqueada&&!zona.completada
+              const esJugable  = zona.desbloqueada||zona.completada
               const pos = POSICIONES[i]
               return (
                 <div key={zona.id} onClick={()=>esJugable&&jugarZona(zona)} style={{position:"absolute",top:pos.top,left:pos.left,transform:"translate(-50%,-50%)",display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:esJugable?"pointer":"default",zIndex:10}}>
@@ -299,23 +293,30 @@ export default function App() {
                     {zona.completada?"✅":zona.desbloqueada?zona.icono:"🔒"}
                   </div>
                   <div style={{background:"rgba(255,255,255,0.88)",borderRadius:20,padding:"1px 7px",fontSize:9,fontWeight:700,color:"#1a3a1a",boxShadow:"0 1px 3px rgba(0,0,0,0.12)",whiteSpace:"nowrap"}}>{zona.nombre}</div>
-                  {esCurrent    && <div style={{background:"#4CAF50",color:"#fff",borderRadius:20,padding:"2px 8px",fontSize:9,fontWeight:700,boxShadow:"0 2px 5px rgba(76,175,80,0.5)"}}>Jugar →</div>}
+                  {esCurrent     && <div style={{background:"#4CAF50",color:"#fff",borderRadius:20,padding:"2px 8px",fontSize:9,fontWeight:700,boxShadow:"0 2px 5px rgba(76,175,80,0.5)"}}>Jugar →</div>}
                   {zona.completada && <div style={{background:"rgba(255,255,255,0.8)",color:"#2E7D32",borderRadius:20,padding:"2px 8px",fontSize:9,fontWeight:700}}>Repetir 🔁</div>}
                 </div>
               )
             })}
-            <div style={{position:"absolute",bottom:12,left:10,display:"flex",flexDirection:"column",alignItems:"flex-start",gap:5,zIndex:20}}>
-              <div style={{background:"#fff",borderRadius:"14px 14px 14px 3px",padding:"7px 11px",boxShadow:"0 2px 12px rgba(0,0,0,0.15)",maxWidth:190,fontSize:11,fontWeight:500,color:"#2C3E50",lineHeight:1.5}}>{msg}</div>
-              <img src="/mascota.png" alt="Rufi" style={{width:90,height:90,objectFit:"contain"}}/>
+            <div style={{position:"absolute",bottom:10,left:10,display:"flex",flexDirection:"column",alignItems:"flex-start",gap:6,zIndex:20}}>
+              {mostrarMensaje && (
+                <div onClick={()=>setMostrarMensaje(false)} style={{background:"#fff",borderRadius:"14px 14px 14px 3px",padding:"8px 12px",boxShadow:"0 2px 12px rgba(0,0,0,0.18)",maxWidth:175,fontSize:11,fontWeight:500,color:"#2C3E50",lineHeight:1.5,cursor:"pointer",border:"1px solid rgba(0,0,0,0.06)"}}>
+                  {msg}
+                  <div style={{fontSize:9,color:"#bbb",marginTop:3}}>toca para cerrar</div>
+                </div>
+              )}
+              <img src={RUFI} alt="Rufi" onClick={()=>setMostrarMensaje(m=>!m)}
+                style={{width:100,height:100,objectFit:"contain",cursor:"pointer",filter:"drop-shadow(0 3px 8px rgba(0,0,0,0.22))",transition:"transform 0.15s",transform:mostrarMensaje?"scale(1.05)":"scale(1)"}}/>
             </div>
           </div>
         </div>
+        <NavBar pantalla={pantalla} setPantalla={setPantalla}/>
       </div>
     )
   }
 
-  /* ── QUIZ ── */
-  if (pantalla === "quiz") {
+  // ── QUIZ ──
+  if (pantalla==="quiz") {
     const pregunta = preguntas[indice]
     const opciones = [{letra:"A",texto:pregunta.opcion_a},{letra:"B",texto:pregunta.opcion_b},{letra:"C",texto:pregunta.opcion_c},{letra:"D",texto:pregunta.opcion_d}]
     return (
@@ -358,7 +359,7 @@ export default function App() {
                 <div style={{fontSize:12,color:"#555",lineHeight:1.5}}>{pregunta.explicacion}</div>
               </div>
               <div style={{display:"flex",alignItems:"flex-end",gap:8,marginBottom:12}}>
-                <img src={`/${imgMascota}`} alt="Rufi" style={{width:70,height:70,objectFit:"contain",flexShrink:0}}/>
+                <img src={imgMascota} alt="Rufi" style={{width:70,height:70,objectFit:"contain",flexShrink:0}}/>
                 <div style={{background:"#fff",borderRadius:"14px 14px 14px 3px",padding:"9px 12px",boxShadow:"0 2px 8px rgba(0,0,0,0.09)",fontSize:12,fontWeight:500,color:"#2C3E50",flex:1,lineHeight:1.5}}>
                   {cargandoComentario?"...":comentario||(seleccion===pregunta.respuesta_correcta?"Bien hecho.":"Sigue, la proxima es tuya.")}
                 </div>
@@ -373,32 +374,176 @@ export default function App() {
     )
   }
 
-  /* ── COMPLETADO ── */
-  const siguienteZona = zonas.find(z=>z.desbloqueada&&!z.completada)
-  return (
-    <div style={{background:"#5A9E52",minHeight:"100vh",fontFamily:"system-ui,sans-serif"}}>
-      <div style={{...shell,background:"linear-gradient(180deg,#A8D5A2 0%,#5A9E52 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,textAlign:"center"}}>
-        <div style={{fontSize:52,marginBottom:6}}>🎉</div>
-        <img src="/mascota.png" alt="Rufi" style={{width:130,height:130,objectFit:"contain",marginBottom:12}}/>
-        <h2 style={{fontSize:22,fontWeight:900,color:"#fff",textShadow:"0 2px 8px rgba(0,0,0,0.3)",margin:"0 0 6px"}}>{zonaActiva?.nombre} completada</h2>
-        <p style={{color:"rgba(255,255,255,0.9)",marginBottom:16,fontSize:14}}>{correctas} de {preguntas.length} correctas</p>
-        <div style={{display:"flex",gap:6,marginBottom:20}}>
-          {preguntas.map((_,i)=><span key={i} style={{fontSize:28,filter:i<correctas?"none":"grayscale(1) opacity(0.4)"}}>⭐</span>)}
-        </div>
-        {siguienteZona&&(
-          <div style={{background:"rgba(255,255,255,0.9)",borderRadius:12,padding:"10px 16px",marginBottom:16,fontSize:13,color:"#2C3E50",fontWeight:600}}>
-            Desbloqueaste: {siguienteZona.icono} {siguienteZona.nombre}
+  // ── COMPLETADO ──
+  if (pantalla==="completado") {
+    const siguienteZona = zonas.find(z=>z.desbloqueada&&!z.completada)
+    return (
+      <div style={{background:"#5A9E52",minHeight:"100vh",fontFamily:"system-ui,sans-serif"}}>
+        <div style={{...shell,background:"linear-gradient(180deg,#A8D5A2 0%,#5A9E52 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,textAlign:"center"}}>
+          <div style={{fontSize:52,marginBottom:6}}>🎉</div>
+          <img src={RUFI} alt="Rufi" style={{width:130,height:130,objectFit:"contain",marginBottom:12}}/>
+          <h2 style={{fontSize:22,fontWeight:900,color:"#fff",textShadow:"0 2px 8px rgba(0,0,0,0.3)",margin:"0 0 6px"}}>{zonaActiva?.nombre} completada</h2>
+          <p style={{color:"rgba(255,255,255,0.9)",marginBottom:16,fontSize:14}}>{correctas} de {preguntas.length} correctas</p>
+          <div style={{display:"flex",gap:6,marginBottom:20}}>
+            {preguntas.map((_,i)=><span key={i} style={{fontSize:28,filter:i<correctas?"none":"grayscale(1) opacity(0.4)"}}>⭐</span>)}
           </div>
-        )}
-        <div style={{display:"flex",gap:10,width:"100%",maxWidth:300}}>
-          <button onClick={()=>jugarZona(zonaActiva)} style={{flex:1,padding:"13px 12px",background:"rgba(255,255,255,0.25)",border:"2px solid rgba(255,255,255,0.6)",borderRadius:12,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
-            🔁 Repetir
-          </button>
-          <button onClick={()=>setPantalla("mapa")} style={{flex:2,padding:"13px 12px",background:"#fff",border:"none",borderRadius:12,color:"#2E7D32",fontSize:14,fontWeight:800,cursor:"pointer",boxShadow:"0 4px 14px rgba(0,0,0,0.18)"}}>
-            Al mapa →
-          </button>
+          {siguienteZona&&(
+            <div style={{background:"rgba(255,255,255,0.9)",borderRadius:12,padding:"10px 16px",marginBottom:16,fontSize:13,color:"#2C3E50",fontWeight:600}}>
+              Desbloqueaste: {siguienteZona.icono} {siguienteZona.nombre}
+            </div>
+          )}
+          <div style={{display:"flex",gap:10,width:"100%",maxWidth:300}}>
+            <button onClick={()=>jugarZona(zonaActiva)} style={{flex:1,padding:"13px 12px",background:"rgba(255,255,255,0.25)",border:"2px solid rgba(255,255,255,0.6)",borderRadius:12,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+              🔁 Repetir
+            </button>
+            <button onClick={()=>setPantalla("mapa")} style={{flex:2,padding:"13px 12px",background:"#fff",border:"none",borderRadius:12,color:"#2E7D32",fontSize:14,fontWeight:800,cursor:"pointer",boxShadow:"0 4px 14px rgba(0,0,0,0.18)"}}>
+              Al mapa →
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
+
+  // ── PERFIL ──
+  if (pantalla==="perfil") {
+    const progreso       = getProgreso()
+    const zonasCompletas = progreso.filter(p=>p.completada).length
+    const totalCorrectas = progreso.reduce((acc,p)=>acc+(p.puntaje||0),0)
+    const mejorPuntaje   = progreso.length>0 ? Math.max(...progreso.map(p=>p.puntaje||0)) : 0
+    const diasGuardados  = JSON.parse(localStorage.getItem("preusmart_dias")||"[]")
+    const materias       = JSON.parse(localStorage.getItem("preusmart_materias")||"[]")
+    return (
+      <div style={{background:"#f0f7f0",minHeight:"100vh",fontFamily:"system-ui,sans-serif",paddingBottom:80}}>
+        <div style={shell}>
+          <div style={{background:"linear-gradient(180deg,#4A8C3F,#2E7D32)",padding:"48px 24px 28px",textAlign:"center"}}>
+            <img src={usuario?.photoURL||RUFI} alt="avatar" style={{width:80,height:80,borderRadius:"50%",border:"3px solid #fff",marginBottom:12,objectFit:"cover"}}/>
+            <h2 style={{color:"#fff",margin:"0 0 4px",fontSize:20,fontWeight:800}}>{nombre}</h2>
+            <p style={{color:"rgba(255,255,255,0.7)",fontSize:12,margin:0}}>{usuario?.email}</p>
+          </div>
+          <div style={{padding:"16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            {[
+              {label:"Zonas completadas", valor:`${zonasCompletas}/5`},
+              {label:"Respuestas correctas", valor:totalCorrectas},
+              {label:"Mejor puntaje", valor:`${mejorPuntaje}/5`},
+              {label:"Días de estudio", valor:`${diasGuardados.length} días`},
+            ].map((stat,i)=>(
+              <div key={i} style={{background:"#fff",borderRadius:14,padding:"14px",textAlign:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+                <div style={{fontSize:26,fontWeight:900,color:"#2E7D32"}}>{stat.valor}</div>
+                <div style={{fontSize:11,color:"#888",marginTop:4}}>{stat.label}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{padding:"0 16px 16px"}}>
+            <div style={{background:"#fff",borderRadius:14,padding:"16px",boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+              <div style={{fontSize:13,fontWeight:700,color:"#2C3E50",marginBottom:10}}>Materias</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {materias.map(m=>(
+                  <span key={m} style={{background:"#E8F5E9",color:"#2E7D32",borderRadius:20,padding:"4px 12px",fontSize:12,fontWeight:600}}>{m}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+        <NavBar pantalla={pantalla} setPantalla={setPantalla}/>
+      </div>
+    )
+  }
+
+  // ── LOGROS ──
+  if (pantalla==="logros") {
+    const progreso       = getProgreso()
+    const zonasCompletas = progreso.filter(p=>p.completada).length
+    const perfectas      = progreso.filter(p=>p.puntaje===5).length
+    const logros = [
+      {emoji:"🗺️", titulo:"Primer viaje",    desc:"Completa tu primera zona",        ganado: zonasCompletas>=1},
+      {emoji:"⭐",  titulo:"Perfecto",         desc:"Saca 5/5 en una zona",            ganado: perfectas>=1},
+      {emoji:"🏔️", titulo:"Mitad del mapa",   desc:"Completa 3 zonas",               ganado: zonasCompletas>=3},
+      {emoji:"🇨🇱", titulo:"Todo Chile",       desc:"Completa las 5 zonas",           ganado: zonasCompletas>=5},
+      {emoji:"🔁",  titulo:"Sin miedo al error",desc:"Repite una zona",              ganado: false},
+      {emoji:"🎓",  titulo:"Listo para la PAES",desc:"Completa todo con 5/5",        ganado: perfectas>=5},
+    ]
+    return (
+      <div style={{background:"#f0f7f0",minHeight:"100vh",fontFamily:"system-ui,sans-serif",paddingBottom:80}}>
+        <div style={shell}>
+          <div style={{background:"linear-gradient(180deg,#4A8C3F,#2E7D32)",padding:"48px 24px 20px"}}>
+            <h2 style={{color:"#fff",margin:0,fontSize:22,fontWeight:800}}>Logros</h2>
+            <p style={{color:"rgba(255,255,255,0.7)",fontSize:13,margin:"4px 0 0"}}>{logros.filter(l=>l.ganado).length} de {logros.length} desbloqueados</p>
+          </div>
+          <div style={{padding:"16px",display:"flex",flexDirection:"column",gap:10}}>
+            {logros.map((l,i)=>(
+              <div key={i} style={{background:"#fff",borderRadius:14,padding:"14px 16px",display:"flex",alignItems:"center",gap:14,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",opacity:l.ganado?1:0.45}}>
+                <div style={{fontSize:32,filter:l.ganado?"none":"grayscale(1)"}}>{l.emoji}</div>
+                <div>
+                  <div style={{fontSize:14,fontWeight:700,color:"#2C3E50"}}>{l.titulo}</div>
+                  <div style={{fontSize:12,color:"#888",marginTop:2}}>{l.desc}</div>
+                </div>
+                {l.ganado && <div style={{marginLeft:"auto",background:"#E8F5E9",color:"#2E7D32",borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700}}>✓</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+        <NavBar pantalla={pantalla} setPantalla={setPantalla}/>
+      </div>
+    )
+  }
+
+  // ── REPASO ──
+  if (pantalla==="repaso") {
+    return (
+      <div style={{background:"#f0f7f0",minHeight:"100vh",fontFamily:"system-ui,sans-serif",paddingBottom:80}}>
+        <div style={shell}>
+          <div style={{background:"linear-gradient(180deg,#4A8C3F,#2E7D32)",padding:"48px 24px 20px"}}>
+            <h2 style={{color:"#fff",margin:0,fontSize:22,fontWeight:800}}>Repaso</h2>
+            <p style={{color:"rgba(255,255,255,0.7)",fontSize:13,margin:"4px 0 0"}}>Clases antes de viajar</p>
+          </div>
+          <div style={{padding:"24px 16px",textAlign:"center"}}>
+            <img src={RUFI} alt="Rufi" style={{width:110,marginBottom:16}}/>
+            <div style={{background:"#fff",borderRadius:16,padding:"20px",boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+              <div style={{fontSize:32,marginBottom:8}}>📋</div>
+              <div style={{fontSize:16,fontWeight:700,color:"#2C3E50",marginBottom:8}}>Próximamente</div>
+              <div style={{fontSize:13,color:"#888",lineHeight:1.6}}>
+                Antes de cada zona, Rufi te dará una mini-clase de 5 minutos con los conceptos clave. ¡Ya casi está listo!
+              </div>
+            </div>
+          </div>
+        </div>
+        <NavBar pantalla={pantalla} setPantalla={setPantalla}/>
+      </div>
+    )
+  }
+
+  // ── OPCIONES ──
+  if (pantalla==="opciones") {
+    return (
+      <div style={{background:"#f0f7f0",minHeight:"100vh",fontFamily:"system-ui,sans-serif",paddingBottom:80}}>
+        <div style={shell}>
+          <div style={{background:"linear-gradient(180deg,#4A8C3F,#2E7D32)",padding:"48px 24px 20px"}}>
+            <h2 style={{color:"#fff",margin:0,fontSize:22,fontWeight:800}}>Opciones</h2>
+          </div>
+          <div style={{padding:"16px",display:"flex",flexDirection:"column",gap:10}}>
+            <div style={{background:"#fff",borderRadius:14,overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+              {[
+                {label:"Cuenta", valor:usuario?.email, accion:null},
+                {label:"Versión", valor:"1.0 MVP", accion:null},
+              ].map((op,i)=>(
+                <div key={i} style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:i===0?"1px solid #f0f0f0":"none"}}>
+                  <span style={{fontSize:14,color:"#2C3E50",fontWeight:500}}>{op.label}</span>
+                  <span style={{fontSize:13,color:"#999"}}>{op.valor}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{background:"#fff",borderRadius:14,overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+              <div onClick={()=>{logout();setNombre("");localStorage.clear()}} style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
+                <span style={{fontSize:14,color:"#C62828",fontWeight:600}}>Cerrar sesión</span>
+                <span style={{color:"#ddd"}}>›</span>
+              </div>
+            </div>
+            <p style={{textAlign:"center",fontSize:11,color:"#bbb",marginTop:8}}>PreuSmart · Hecho con ❤️ en Chile</p>
+          </div>
+        </div>
+        <NavBar pantalla={pantalla} setPantalla={setPantalla}/>
+      </div>
+    )
+  }
 }
