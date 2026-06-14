@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { signInWithGoogle, logout, onAuthChange, track } from "./firebase"
+import { signInWithGoogle, logout, onAuthChange, track, handleRedirectResult } from "./firebase"
 
 const API = "https://preusmart-production.up.railway.app"
 const RUFI = "mascota.gif" // cambia a "mascota.gif" cuando tengas el gif
@@ -93,9 +93,10 @@ export default function App() {
   const [mostrarMensaje,     setMostrarMensaje]     = useState(false)
 
   useEffect(() => {
+    handleRedirectResult()
     const unsub = onAuthChange((user) => { setUsuario(user); setCargandoAuth(false) })
     return () => unsub()
-  }, [])
+}, [])
 
   useEffect(() => {
     if (!nombre || !usuario) return
