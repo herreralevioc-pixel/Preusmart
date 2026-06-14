@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
 import { getAnalytics, logEvent } from "firebase/analytics";
 
 const firebaseConfig = {
@@ -17,15 +17,10 @@ export const auth = getAuth(app);
 export const analytics = getAnalytics(app);
 
 const googleProvider = new GoogleAuthProvider();
-const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+googleProvider.setCustomParameters({ prompt: "select_account" });
 
-export const signInWithGoogle = async () => {
-  await setPersistence(auth, browserLocalPersistence);
-  if (isMobile) return signInWithRedirect(auth, googleProvider);
-  return signInWithPopup(auth, googleProvider);
-};
-
-export const handleRedirectResult = () => getRedirectResult(auth).catch(() => {});
+export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
+export const handleRedirectResult = () => Promise.resolve();
 export const logout = () => signOut(auth);
 export const onAuthChange = (callback) => onAuthStateChanged(auth, callback);
-export const track = (evento, params = {}) => logEvent(analytics, evento, params);
+export const track = (evento, params = {}) => logEvent(analytics, evento, params);;
