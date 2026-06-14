@@ -1,15 +1,7 @@
 import { useState, useEffect } from "react"
+import { signInWithGoogle, onAuthChange, track } from "./firebase"
 
 const API = "https://preusmart-production.up.railway.app"
-
-function getUserId() {
-  let id = localStorage.getItem("preusmart_id")
-  if (!id) {
-    id = Math.random().toString(36).substring(2) + Date.now().toString(36)
-    localStorage.setItem("preusmart_id", id)
-  }
-  return id
-}
 
 function getProgreso() {
   const saved = localStorage.getItem("preusmart_progreso")
@@ -23,8 +15,6 @@ function saveProgreso(zonaId, puntaje) {
   else progreso.push({ zona_id: zonaId, completada: true, puntaje })
   localStorage.setItem("preusmart_progreso", JSON.stringify(progreso))
 }
-
-const USUARIO_ID = getUserId()
 
 const MATERIAS_OPC = [
   { id:"matematicas", nombre:"Matemáticas", emoji:"📐", disponible:true  },
@@ -63,32 +53,44 @@ const greenBg = {
 }
 
 export default function App() {
+  const [usuario,            setUsuario]            = useState(null)
+  const [cargandoAuth,       setCargandoAuth]       = useState(true)
+
   const nombreGuardado = localStorage.getItem("preusmart_nombre")
 
-  const [nombre,               setNombre]               = useState(nombreGuardado || "")
-  const [paso,                 setPaso]                  = useState(0)
-  const [inputNombre,          setInputNombre]           = useState("")
-  const [materiasSelec,        setMateriasSelec]         = useState(["matematicas"])
-  const [diasSelec,            setDiasSelec]             = useState([])
+  const [nombre,             setNombre]             = useState(nombreGuardado || "")
+  const [paso,               setPaso]               = useState(0)
+  const [inputNombre,        setInputNombre]        = useState("")
+  const [materiasSelec,      setMateriasSelec]      = useState(["matematicas"])
+  const [diasSelec,          setDiasSelec]          = useState([])
 
-  const [pantalla,             setPantalla]              = useState("mapa")
-  const [zonas,                setZonas]                 = useState([])
-  const [preguntas,            setPreguntas]             = useState([])
-  const [zonaActiva,           setZonaActiva]            = useState(null)
-  const [indice,               setIndice]                = useState(0)
-  const [seleccion,            setSeleccion]             = useState(null)
-  const [feedback,             setFeedback]              = useState(false)
-  const [correctas,            setCorrectas]             = useState(0)
-  const [imgMascota,           setImgMascota]            = useState("mascota.png")
-  const [comentario,           setComentario]            = useState("")
-  const [cargandoComentario,   setCargandoComentario]    = useState(false)
+  const [pantalla,           setPantalla]           = useState("mapa")
+  const [zonas,              setZonas]              = useState([])
+  const [preguntas,          setPreguntas]          = useState([])
+  const [zonaActiva,         setZonaActiva]         = useState(null)
+  const [indice,             setIndice]             = useState(0)
+  const [seleccion,          setSeleccion]          = useState(null)
+  const [feedback,           setFeedback]           = useState(false)
+  const [correctas,          setCorrectas]          = useState(0)
+  const [imgMascota,         setImgMascota]         = useState("mascota.png")
+  const [comentario,         setComentario]         = useState("")
+  const [cargandoComentario, setCargandoComentario] = useState(false)
+
+  // ── Firebase Auth ──
+  useEffect(() => {
+    const unsub = onAuthChange((user) => {
+      setUsuario(user)
+      setCargandoAuth(false)
+    })
+    return () => unsub()
+  }, [])
 
   useEffect(() => {
-    if (!nombre) return
+    if (!nombre || !usuario) return
     fetch(`${API}/zonas`)
       .then(r => r.json())
       .then(zonasData => {
-        const progreso  = getProgreso()
+        const progreso   = getProgreso()
         const completadas = progreso.filter(p => p.completada).map(p => p.zona_id)
         setZonas(zonasData.map((z, i) => ({
           ...z,
@@ -96,7 +98,7 @@ export default function App() {
           desbloqueada: i === 0 || completadas.includes(zonasData[i-1].id)
         })))
       })
-  }, [nombre])
+  }, [nombre, usuario])
 
   function toggleMateria(id) {
     setMateriasSelec(prev => prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id])
@@ -107,19 +109,22 @@ export default function App() {
 
   function completarOnboarding() {
     const n = inputNombre.trim()
-    localStorage.setItem("preusmart_nombre",  n)
+    localStorage.setItem("preusmart_nombre",   n)
     localStorage.setItem("preusmart_materias", JSON.stringify(materiasSelec))
     localStorage.setItem("preusmart_dias",     JSON.stringify(diasSelec))
     setNombre(n)
     fetch(`${API}/registro`, {
       method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ usuario_id:USUARIO_ID, nombre:n, materias:materiasSelec, dias_estudio:diasSelec })
+      body: JSON.stringify({ usuario_id: usuario.uid, nombre:n, materias:materiasSelec, dias_estudio:diasSelec })
     }).catch(() => {})
+    track("onboarding_completado", { nombre: n })
   }
 
   function jugarZona(zona) {
     setZonaActiva(zona); setIndice(0); setSeleccion(null)
     setFeedback(false); setCorrectas(0); setImgMascota("mascota.png"); setComentario("")
+    if (zona.completada) track("zona_repetida",  { zona_id: zona.id })
+    else                 track("zona_iniciada",   { zona_id: zona.id, zona_nombre: zona.nombre })
     fetch(`${API}/preguntas/${zona.id}`).then(r=>r.json()).then(data=>{setPreguntas(data);setPantalla("quiz")})
   }
 
@@ -129,6 +134,7 @@ export default function App() {
     const esCorrecta = opcion === preguntas[indice].respuesta_correcta
     if (esCorrecta) { setCorrectas(c=>c+1); setImgMascota("mascota.png") }
     else setImgMascota("mascota-triste.png")
+    track("pregunta_respondida", { zona_id: zonaActiva.id, es_correcto: esCorrecta, indice })
     fetch(`${API}/comentario`, {
       method:"POST", headers:{"Content-Type":"application/json"},
       body: JSON.stringify({ es_correcto:esCorrecta, pregunta:preguntas[indice].enunciado, respuesta_usuario:opcion, respuesta_correcta:preguntas[indice].respuesta_correcta })
@@ -140,22 +146,50 @@ export default function App() {
     const total = correctas + (seleccion === preguntas[indice].respuesta_correcta ? 1 : 0)
     if (esUltima) {
       saveProgreso(zonaActiva.id, total)
-      fetch(`${API}/progreso`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({usuario_id:USUARIO_ID,zona_id:zonaActiva.id,puntaje:total})}).catch(()=>{})
+      fetch(`${API}/progreso`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({usuario_id:usuario.uid,zona_id:zonaActiva.id,puntaje:total})}).catch(()=>{})
       setZonas(prev=>prev.map((z,i,arr)=>{
         if(z.id===zonaActiva.id) return{...z,completada:true}
         if(i>0&&arr[i-1].id===zonaActiva.id) return{...z,desbloqueada:true}
         return z
       }))
+      track("zona_completada", { zona_id: zonaActiva.id, puntaje: total })
       setPantalla("completado")
     } else {
       setIndice(i=>i+1); setSeleccion(null); setFeedback(false); setImgMascota("mascota.png"); setComentario("")
     }
   }
 
+  // ── Pantalla de carga ──
+  if (cargandoAuth) return (
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",background:"#4A8C3F",fontFamily:"system-ui,sans-serif"}}>
+      <div style={{textAlign:"center"}}>
+        <img src="/mascota.png" alt="Rufi" style={{width:100,marginBottom:16}}/>
+        <div style={{color:"#fff",fontSize:16,fontWeight:600}}>Cargando...</div>
+      </div>
+    </div>
+  )
+
+  // ── Login con Google ──
+  if (!usuario) return (
+    <div style={{background:"#4A8C3F",minHeight:"100vh",fontFamily:"system-ui,sans-serif"}}>
+      <div style={{...shell,...greenBg}}>
+        <h1 style={{fontSize:32,fontWeight:900,color:"#fff",margin:"0 0 4px",textShadow:"0 2px 8px rgba(0,0,0,0.2)"}}>PreuSmart</h1>
+        <p style={{color:"rgba(255,255,255,0.8)",fontSize:13,marginBottom:28}}>Tu compañero hacia la universidad 🇨🇱</p>
+        <img src="/mascota.png" alt="Rufi" style={{width:140,height:140,objectFit:"contain",marginBottom:20}}/>
+        <div style={{background:"#fff",borderRadius:"16px 16px 16px 4px",padding:"12px 16px",marginBottom:32,fontSize:14,fontWeight:500,color:"#2C3E50",maxWidth:260,lineHeight:1.6}}>
+          Hola! Soy Rufi. Entra con Google para guardar tu progreso en todos tus dispositivos.
+        </div>
+        <button onClick={signInWithGoogle} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 24px",background:"#fff",border:"none",borderRadius:12,cursor:"pointer",fontSize:15,fontWeight:700,color:"#2C3E50",boxShadow:"0 4px 14px rgba(0,0,0,0.2)",width:"100%",maxWidth:300,justifyContent:"center"}}>
+          <img src="https://www.google.com/favicon.ico" alt="Google" style={{width:20,height:20}}/>
+          Entrar con Google
+        </button>
+      </div>
+    </div>
+  )
+
   /* ── ONBOARDING ── */
   if (!nombre) {
 
-    /* Paso 0 — Nombre */
     if (paso === 0) return (
       <div style={{background:"#4A8C3F",minHeight:"100vh",fontFamily:"system-ui,sans-serif"}}>
         <div style={{...shell,...greenBg}}>
@@ -181,7 +215,6 @@ export default function App() {
       </div>
     )
 
-    /* Paso 1 — Materias */
     if (paso === 1) return (
       <div style={{background:"#4A8C3F",minHeight:"100vh",fontFamily:"system-ui,sans-serif"}}>
         <div style={{...shell,...greenBg}}>
@@ -210,7 +243,6 @@ export default function App() {
       </div>
     )
 
-    /* Paso 2 — Días */
     return (
       <div style={{background:"#4A8C3F",minHeight:"100vh",fontFamily:"system-ui,sans-serif"}}>
         <div style={{...shell,...greenBg}}>
@@ -258,15 +290,17 @@ export default function App() {
           <div style={{position:"relative",background:"#a8d4e6"}}>
             <img src="/mapa-chile.png" alt="Mapa de Chile" style={{width:"100%",display:"block"}}/>
             {zonas.map((zona,i)=>{
-              const esCurrent=zona.desbloqueada&&!zona.completada
-              const pos=POSICIONES[i]
+              const esCurrent  = zona.desbloqueada && !zona.completada
+              const esJugable  = zona.desbloqueada || zona.completada
+              const pos = POSICIONES[i]
               return (
-                <div key={zona.id} onClick={()=>esCurrent&&jugarZona(zona)} style={{position:"absolute",top:pos.top,left:pos.left,transform:"translate(-50%,-50%)",display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:esCurrent?"pointer":"default",zIndex:10}}>
+                <div key={zona.id} onClick={()=>esJugable&&jugarZona(zona)} style={{position:"absolute",top:pos.top,left:pos.left,transform:"translate(-50%,-50%)",display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:esJugable?"pointer":"default",zIndex:10}}>
                   <div style={{width:esCurrent?48:38,height:esCurrent?48:38,borderRadius:"50%",background:zona.completada?"#4CAF50":zona.desbloqueada?"rgba(255,255,255,0.95)":"rgba(255,255,255,0.45)",border:`2.5px solid ${esCurrent?"#FFD700":zona.completada?"#2E7D32":"rgba(80,80,80,0.4)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:esCurrent?20:17,boxShadow:esCurrent?"0 0 0 4px rgba(255,215,0,0.4),0 3px 10px rgba(0,0,0,0.25)":"0 2px 5px rgba(0,0,0,0.2)",transition:"all 0.2s"}}>
                     {zona.completada?"✅":zona.desbloqueada?zona.icono:"🔒"}
                   </div>
                   <div style={{background:"rgba(255,255,255,0.88)",borderRadius:20,padding:"1px 7px",fontSize:9,fontWeight:700,color:"#1a3a1a",boxShadow:"0 1px 3px rgba(0,0,0,0.12)",whiteSpace:"nowrap"}}>{zona.nombre}</div>
-                  {esCurrent&&<div style={{background:"#4CAF50",color:"#fff",borderRadius:20,padding:"2px 8px",fontSize:9,fontWeight:700,boxShadow:"0 2px 5px rgba(76,175,80,0.5)"}}>Jugar →</div>}
+                  {esCurrent    && <div style={{background:"#4CAF50",color:"#fff",borderRadius:20,padding:"2px 8px",fontSize:9,fontWeight:700,boxShadow:"0 2px 5px rgba(76,175,80,0.5)"}}>Jugar →</div>}
+                  {zona.completada && <div style={{background:"rgba(255,255,255,0.8)",color:"#2E7D32",borderRadius:20,padding:"2px 8px",fontSize:9,fontWeight:700}}>Repetir 🔁</div>}
                 </div>
               )
             })}
@@ -356,9 +390,14 @@ export default function App() {
             Desbloqueaste: {siguienteZona.icono} {siguienteZona.nombre}
           </div>
         )}
-        <button onClick={()=>setPantalla("mapa")} style={{padding:"13px 28px",background:"#fff",border:"none",borderRadius:12,color:"#2E7D32",fontSize:15,fontWeight:800,cursor:"pointer",boxShadow:"0 4px 14px rgba(0,0,0,0.18)"}}>
-          Volver al mapa
-        </button>
+        <div style={{display:"flex",gap:10,width:"100%",maxWidth:300}}>
+          <button onClick={()=>jugarZona(zonaActiva)} style={{flex:1,padding:"13px 12px",background:"rgba(255,255,255,0.25)",border:"2px solid rgba(255,255,255,0.6)",borderRadius:12,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+            🔁 Repetir
+          </button>
+          <button onClick={()=>setPantalla("mapa")} style={{flex:2,padding:"13px 12px",background:"#fff",border:"none",borderRadius:12,color:"#2E7D32",fontSize:14,fontWeight:800,cursor:"pointer",boxShadow:"0 4px 14px rgba(0,0,0,0.18)"}}>
+            Al mapa →
+          </button>
+        </div>
       </div>
     </div>
   )
